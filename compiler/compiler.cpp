@@ -94,7 +94,7 @@ int main(int argc, char** argv) {
         bin_file.write(opcode.c_str(), opcode.size());
         bin_file.put('\n');
 
-		// Loop interno: analisa argumentos (linhas seguintes) para os comandos
+        // Loop interno: analisa argumentos (linhas seguintes) para os comandos
         for (int i = 0; i < expectedArgs; i++) {
             
             if (!getline(asm_file, argBuffer)) {
