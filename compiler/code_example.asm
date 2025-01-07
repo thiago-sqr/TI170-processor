@@ -13,4 +13,3 @@ NO T
    ;FHFFJK
 NOT
 01
-110
