@@ -75,8 +75,8 @@ int main(int argc, char** argv) {
 
     string cmdBuffer, argBuffer;
 
-	// Loop principal: procura comandos que são representados por mnemonicos válidos
-	while (getline(asm_file, cmdBuffer)) {
+    // Loop principal: procura comandos que são representados por mnemonicos válidos
+    while (getline(asm_file, cmdBuffer)) {
 
         removeComments(cmdBuffer); removeSpaces(cmdBuffer);
 
