@@ -34,7 +34,7 @@ bool isBinary(const string& s) {
 }
 
 bool isCommand(const string& s) {
-    return mnemonics.count(s) != 1;
+    return mnemonics.count(s) == 1;
 }
 
 int getArguments(const string& s) {
@@ -74,16 +74,18 @@ int main(int argc, char** argv) {
     }
 
     string cmdBuffer, argBuffer;
+    int line = 0;
 
     // Loop principal: procura comandos que são representados por mnemonicos válidos
     while (getline(asm_file, cmdBuffer)) {
-
+        
+        line++;
         removeComments(cmdBuffer); removeSpaces(cmdBuffer);
 
         if (cmdBuffer.empty()) continue;
 
-        if (isCommand(cmdBuffer)) {
-            cerr << "Semantic Error: Command " << cmdBuffer << " is undefined" << endl;
+        if (!isCommand(cmdBuffer)) {
+            cerr << "Semantic Error in line " << line << ": Command " << cmdBuffer << " is undefined" << endl;
             asm_file.close(); bin_file.close();
             return 3;
         }
@@ -97,6 +99,8 @@ int main(int argc, char** argv) {
         // Loop interno: analisa argumentos (linhas seguintes) para os comandos
         for (int i = 0; i < expectedArgs; i++) {
             
+            line++;
+
             if (!getline(asm_file, argBuffer)) {
                 cerr << "EOF reached before expected arguments" << endl;
                 asm_file.close(); bin_file.close();
@@ -110,7 +114,7 @@ int main(int argc, char** argv) {
             }
 
             if (!isBinary(argBuffer) || argBuffer.size() > WORD_SIZE) {
-                cerr << "Syntactic Error: Invalid argument " << argBuffer << " for command " << cmdBuffer << endl;
+                cerr << "Syntactic Error in line " << line << ": Invalid argument " << argBuffer << " for command " << cmdBuffer << endl;
                 cerr << "Expected binary argument of size " << WORD_SIZE << endl;
                 asm_file.close(); bin_file.close();
                 return 5;
