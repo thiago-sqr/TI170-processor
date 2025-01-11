@@ -100,6 +100,8 @@ module alu(
             4'b1001: resultado = (B != 0) ? A / B : 8'hFF; // Divisão (proteção contra divisão por zero)
             4'b1010: resultado = (B != 0) ? A % B : 8'hFF; // Resto da divisão
             4'b1011: resultado = (A == B) ? 8'h01 : 8'h00; // Comparação (igualdade)
+            4'b1100: resultado = A & ~(1 << B);        // Limpa bit B de A
+            4'b1101: resultado = A | (1 << B);        // Seta bit B de A
             default: resultado = 8'h00;                // NOP
         endcase
 
@@ -133,41 +135,133 @@ module multiplexador(
     end
 endmodule
 
-// Caminho de Dados da CPU
-module caminho_dados(
+// Unidade de Controle
+module unidade_controle(
     input wire clock,
     input wire reset,
-    input wire [1:0] bus1_sel,
-    input wire [1:0] bus2_sel,
-    input wire [3:0] alu_sel,
-    input wire [7:0] dado_mem,
-    output wire [7:0] endereco_mem,
-    output wire [7:0] dado_para_mem
+    input wire [7:0] IR,          // Instrução atual
+    input wire [7:0] NZVC,        // Flags da ALU
+    output reg [1:0] bus1_sel,   // Seleção do Bus1
+    output reg [1:0] bus2_sel,   // Seleção do Bus2
+    output reg [3:0] alu_sel,    // Seleção da operação da ALU
+    output reg PC_inc,           // Incrementar PC
+    output reg PC_load,          // Carregar PC
+    output reg MAR_load,         // Carregar MAR
+    output reg IR_load,          // Carregar IR
+    output reg A_load,           // Carregar registrador A
+    output reg B_load,           // Carregar registrador B
+    output reg CCR_load,         // Carregar registrador de Flags
+    output reg write             // Sinal de escrita para a RAM
 );
-    wire [7:0] PC, IR, MAR, R1, R2, R3, bus1, bus2, alu_out;
-    wire [7:0] flags;
-
-    // Instâncias de Registradores
-    registrador reg_pc(clock, reset, 1'b1, bus2, PC);
-    registrador reg_ir(clock, reset, 1'b1, bus2, IR);
-    registrador reg_mar(clock, reset, 1'b1, bus2, MAR);
-    registrador reg_r1(clock, reset, 1'b1, bus2, R1);
-    registrador reg_r2(clock, reset, 1'b1, bus2, R2);
-    registrador reg_r3(clock, reset, 1'b1, bus2, R3);
-
-    // Instância da ALU
-    alu alu_inst(R1, R2, alu_sel, alu_out, flags);
-
-    // Multiplexadores
-    multiplexador mux1(PC, R1, R2, bus1_sel, bus1);
-    multiplexador mux2(alu_out, bus1, dado_mem, bus2_sel, bus2);
-
-    // Barramentos
-    assign endereco_mem = MAR;
-    assign dado_para_mem = bus1;
+    always @(posedge clock or negedge reset) begin
+        if (!reset) begin
+            // Resetar sinais de controle
+            bus1_sel <= 2'b00;
+            bus2_sel <= 2'b00;
+            alu_sel <= 4'b0000;
+            PC_inc <= 0;
+            PC_load <= 0;
+            MAR_load <= 0;
+            IR_load <= 0;
+            A_load <= 0;
+            B_load <= 0;
+            CCR_load <= 0;
+            write <= 0;
+        end else begin
+            case (IR[7:4])
+                4'b0000: begin // NOP
+                    PC_inc <= 1;
+                end
+                4'b0001: begin // MOV
+                    bus1_sel <= IR[3:2];
+                    bus2_sel <= IR[1:0];
+                    A_load <= 1;
+                    PC_inc <= 1;
+                end
+                4'b0010: begin // ADD
+                    alu_sel <= 4'b0000;
+                    A_load <= 1;
+                    CCR_load <= 1;
+                    PC_inc <= 1;
+                end
+                4'b0011: begin // SUB
+                    alu_sel <= 4'b0001;
+                    A_load <= 1;
+                    CCR_load <= 1;
+                    PC_inc <= 1;
+                end
+                4'b0100: begin // MUL
+                    alu_sel <= 4'b1000;
+                    A_load <= 1;
+                    CCR_load <= 1;
+                    PC_inc <= 1;
+                end
+                4'b0101: begin // DIV
+                    alu_sel <= 4'b1001;
+                    A_load <= 1;
+                    CCR_load <= 1;
+                    PC_inc <= 1;
+                end
+                4'b0110: begin // JMP
+                    PC_load <= 1;
+                end
+                4'b0111: begin // JZ
+                    if (NZVC[6]) // Zero flag
+                        PC_load <= 1;
+                end
+                4'b1000: begin // CALL
+                    MAR_load <= 1;
+                    PC_inc <= 1;
+                end
+                4'b1001: begin // RET
+                    PC_load <= 1;
+                end
+                4'b1010: begin // AND
+                    alu_sel <= 4'b0010;
+                    A_load <= 1;
+                    CCR_load <= 1;
+                    PC_inc <= 1;
+                end
+                4'b1011: begin // OR
+                    alu_sel <= 4'b0011;
+                    A_load <= 1;
+                    CCR_load <= 1;
+                    PC_inc <= 1;
+                end
+                4'b1100: begin // XOR
+                    alu_sel <= 4'b0100;
+                    A_load <= 1;
+                    CCR_load <= 1;
+                    PC_inc <= 1;
+                end
+                4'b1101: begin // NOT
+                    alu_sel <= 4'b0101;
+                    A_load <= 1;
+                    CCR_load <= 1;
+                    PC_inc <= 1;
+                end
+                4'b1110: begin // SHIFT LEFT
+                    alu_sel <= 4'b0110;
+                    A_load <= 1;
+                    CCR_load <= 1;
+                    PC_inc <= 1;
+                end
+                4'b1111: begin // SHIFT RIGHT
+                    alu_sel <= 4'b0111;
+                    A_load <= 1;
+                    CCR_load <= 1;
+                    PC_inc <= 1;
+                end
+                default: begin
+                    // Default NOP
+                    PC_inc <= 1;
+                end
+            endcase
+        end
+    end
 endmodule
 
-// Processador Completo de 8 bits
+// Processador Completo de 8 bits atualizado
 module processador_8bits(
     input wire clock,
     input wire reset,
@@ -180,9 +274,9 @@ module processador_8bits(
     wire [7:0] dado_mem;
     wire [1:0] bus1_sel;
     wire [1:0] bus2_sel;
-    wire [2:0] alu_sel;
+    wire [3:0] alu_sel;
     wire PC_inc, PC_load, MAR_load, IR_load, A_load, B_load, CCR_load, write;
-    wire [3:0] NZVC;           // Flags da ALU
+    wire [7:0] NZVC; // Flags da ALU
 
     // Instância da memória de programa (ROM)
     memoria_programa rom(
