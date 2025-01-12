@@ -22,6 +22,8 @@ module alu(
             4'b1001: resultado = (B != 0) ? A / B : 8'hFF; // Divisão (proteção contra divisão por zero)
             4'b1010: resultado = (B != 0) ? A % B : 8'hFF; // Resto da divisão
             4'b1011: resultado = (A == B) ? 8'h01 : 8'h00; // Comparação (igualdade)
+            4'b1100: resultado = A & ~(1 << B);        // Limpa bit B de A
+            4'b1101: resultado = A | (1 << B);        // Seta bit B de A
             default: resultado = 8'h00;                // NOP
         endcase
 
