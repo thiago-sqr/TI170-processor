@@ -88,20 +88,20 @@ module alu(
 
     always @(*) begin
         case (operacao)
-            4'b0000: {carry_out, resultado} = A + B;    // Adição
-            4'b0001: {carry_out, resultado} = A - B;    // Subtração
-            4'b0010: resultado = A & B;                // AND
-            4'b0011: resultado = A | B;                // OR
-            4'b0100: resultado = A ^ B;                // XOR
-            4'b0101: resultado = ~A;                   // NOT
-            4'b0110: resultado = A << 1;               // Deslocar para a esquerda
-            4'b0111: resultado = A >> 1;               // Deslocar para a direita
-            4'b1000: resultado = A * B;                // Multiplicação
-            4'b1001: resultado = (B != 0) ? A / B : 8'hFF; // Divisão (proteção contra divisão por zero)
-            4'b1010: resultado = (B != 0) ? A % B : 8'hFF; // Resto da divisão
-            4'b1011: resultado = (A == B) ? 8'h01 : 8'h00; // Comparação (igualdade)
-            4'b1100: resultado = A & ~(1 << B);        // Limpa bit B de A
-            4'b1101: resultado = A | (1 << B);        // Seta bit B de A
+            4'h0: {carry_out, resultado} = A + B;    // Adição
+            4'h1: {carry_out, resultado} = A - B;    // Subtração
+            4'h2: resultado = A & B;                // AND
+            4'h3: resultado = A | B;                // OR
+            4'h4: resultado = A ^ B;                // XOR
+            4'h5: resultado = ~A;                   // NOT
+            4'h6: resultado = A << 1;               // Deslocar para a esquerda
+            4'h7: resultado = A >> 1;               // Deslocar para a direita
+            4'h8: resultado = A * B;                // Multiplicação
+            4'h9: resultado = (B != 0) ? A / B : 8'hFF; // Divisão (proteção contra divisão por zero)
+            4'hA: resultado = (B != 0) ? A % B : 8'hFF; // Resto da divisão
+            4'hB: resultado = (A == B) ? 8'h01 : 8'h00; // Comparação (igualdade)
+            4'hC: resultado = A & ~(1 << B);        // Limpa bit B de A
+            4'hD: resultado = A | (1 << B);        // Seta bit B de A
             default: resultado = 8'h00;                // NOP
         endcase
 
@@ -158,7 +158,7 @@ module unidade_controle(
             // Resetar sinais de controle
             bus1_sel <= 2'b00;
             bus2_sel <= 2'b00;
-            alu_sel <= 4'b0000;
+            alu_sel <= 4'h0;
             PC_inc <= 0;
             PC_load <= 0;
             MAR_load <= 0;
@@ -169,84 +169,84 @@ module unidade_controle(
             write <= 0;
         end else begin
             case (IR[7:4])
-                4'b0000: begin // NOP
+                4'h0: begin // NOP
                     PC_inc <= 1;
                 end
-                4'b0001: begin // MOV
+                4'h1: begin // MOV
                     bus1_sel <= IR[3:2];
                     bus2_sel <= IR[1:0];
                     A_load <= 1;
                     PC_inc <= 1;
                 end
-                4'b0010: begin // ADD
+                4'h2: begin // ADD
                     alu_sel <= 4'b0000;
                     A_load <= 1;
                     CCR_load <= 1;
                     PC_inc <= 1;
                 end
-                4'b0011: begin // SUB
+                4'h3: begin // SUB
                     alu_sel <= 4'b0001;
                     A_load <= 1;
                     CCR_load <= 1;
                     PC_inc <= 1;
                 end
-                4'b0100: begin // MUL
+                4'h4: begin // MUL
                     alu_sel <= 4'b1000;
                     A_load <= 1;
                     CCR_load <= 1;
                     PC_inc <= 1;
                 end
-                4'b0101: begin // DIV
+                4'h5: begin // DIV
                     alu_sel <= 4'b1001;
                     A_load <= 1;
                     CCR_load <= 1;
                     PC_inc <= 1;
                 end
-                4'b0110: begin // JMP
+                4'h6: begin // JMP
                     PC_load <= 1;
                 end
-                4'b0111: begin // JZ
+                4'h7: begin // JZ
                     if (NZVC[6]) // Zero flag
                         PC_load <= 1;
                 end
-                4'b1000: begin // CALL
+                4'h8: begin // CALL
                     MAR_load <= 1;
                     PC_inc <= 1;
                 end
-                4'b1001: begin // RET
+                4'h9: begin // RET
                     PC_load <= 1;
                 end
-                4'b1010: begin // AND
+                4'hA: begin // AND
                     alu_sel <= 4'b0010;
                     A_load <= 1;
                     CCR_load <= 1;
                     PC_inc <= 1;
                 end
-                4'b1011: begin // OR
+                4'hB: begin // OR
                     alu_sel <= 4'b0011;
                     A_load <= 1;
                     CCR_load <= 1;
                     PC_inc <= 1;
                 end
-                4'b1100: begin // XOR
+                4'hC: begin // XOR
                     alu_sel <= 4'b0100;
                     A_load <= 1;
                     CCR_load <= 1;
                     PC_inc <= 1;
                 end
-                4'b1101: begin // NOT
+                4'hD: begin // NOT
                     alu_sel <= 4'b0101;
                     A_load <= 1;
                     CCR_load <= 1;
                     PC_inc <= 1;
                 end
-                4'b1110: begin // SHIFT LEFT
+                4'hE: begin // SHIFT LEFT
                     alu_sel <= 4'b0110;
                     A_load <= 1;
                     CCR_load <= 1;
                     PC_inc <= 1;
                 end
-                4'b1111: begin // SHIFT RIGHT
+                4'hF: begin // SHIFT RIGHT
                     alu_sel <= 4'b0111;
                     A_load <= 1;
                     CCR_load <= 1;
