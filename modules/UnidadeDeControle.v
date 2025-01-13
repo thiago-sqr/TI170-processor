@@ -20,8 +20,8 @@ module control_unit (
     reg [7:0] current_state, next_state;
 
     // Definindo os estados da máquina de estados
-    parameter S_FETCH_0 = 0, S_FETCH_1 = 1, S_FETCH_2 = 2, S_DECODE_3 = 3;
-    parameter S_LDA_IMM_4 = 4, S_LDA_IMM_5 = 5, S_LDA_IMM_6 = 6;
+    parameter S_FETCH_0 = 0, S_FETCH_1 = 1, S_FETCH_2 = 2, S_DECODE_3 = 3; // Estados 0, 1 e 2 de busca, e o Estágio de Decodificar a instrução;
+    parameter S_LDA_IMM_4 = 4, S_LDA_IMM_5 = 5, S_LDA_IMM_6 = 6;           //
     parameter S_LDA_DIR_4 = 7, S_LDA_DIR_5 = 8, S_LDA_DIR_6 = 9;
     parameter S_STA_DIR_4 = 12, S_STA_DIR_5 = 13;
     // Outros estados podem ser definidos conforme a necessidade...
@@ -41,8 +41,8 @@ module control_unit (
             S_FETCH_1: next_state <= S_FETCH_2;
             S_FETCH_2: next_state <= S_DECODE_3;
             S_DECODE_3: begin
-                if (IR == 8'b00000001) next_state <= S_LDA_IMM_4; // LDA_IMM
-                else if (IR == 8'b00000010) next_state <= S_LDA_DIR_4; // LDA_DIR
+                if (IR == 8'h01) next_state <= S_LDA_IMM_4; // LDA_IMM
+                else if (IR == 8'h02) next_state <= S_LDA_DIR_4; // LDA_DIR
                 else next_state <= S_FETCH_0; // Caso não reconheça o código
             end
             // Outros estados de transição
