@@ -1,40 +1,87 @@
-module alu(
-    input wire [7:0] A,        // Operando A
-    input wire [7:0] B,        // Operando B
-    input wire [3:0] operacao, // Seleção de operação
-    output reg [7:0] resultado, // Resultado da operação
-    output reg [7:0] flags      // Flags (N, Z, C, P, I, D, V, -)
+module ALU (
+    input wire [7:0] A, B,             // Operandos de entrada
+    input wire [3:0] ALU_Sel,          // Sinal de seleção da operação
+    output reg [7:0] Result,           // Resultado da operação
+    output reg [3:0] NZVC              // Bandeiras de condição: Negativo, Zero, Overflow, Carry
 );
-    reg carry_out;
-    reg parity;
+
+    reg [15:0] TempResult;  // Variável auxiliar para operações que geram resultados maiores que 8 bits
 
     always @(*) begin
-        case (operacao)
-            4'b0000: {carry_out, resultado} = A + B;    // Adição
-            4'b0001: {carry_out, resultado} = A - B;    // Subtração
-            4'b0010: resultado = A & B;                // AND
-            4'b0011: resultado = A | B;                // OR
-            4'b0100: resultado = A ^ B;                // XOR
-            4'b0101: resultado = ~A;                   // NOT
-            4'b0110: resultado = A << 1;               // Deslocar para a esquerda
-            4'b0111: resultado = A >> 1;               // Deslocar para a direita
-            4'b1000: resultado = A * B;                // Multiplicação
-            4'b1001: resultado = (B != 0) ? A / B : 8'hFF; // Divisão (proteção contra divisão por zero)
-            4'b1010: resultado = (B != 0) ? A % B : 8'hFF; // Resto da divisão
-            4'b1011: resultado = (A == B) ? 8'h01 : 8'h00; // Comparação (igualdade)
-            4'b1100: resultado = A & ~(1 << B);        // Limpa bit B de A
-            4'b1101: resultado = A | (1 << B);        // Seta bit B de A
-            default: resultado = 8'h00;                // NOP
+        case (ALU_Sel)
+            4'b0000: begin  // Soma
+                {NZVC[0], Result} = A + B;  // Soma e Carry Flag
+                NZVC[3] = Result[7];        // Negative Flag
+                NZVC[2] = (Result == 8'h00) ? 1 : 0;  // Zero Flag
+                NZVC[1] = ((A[7] == B[7]) && (A[7] != Result[7])) ? 1 : 0;  // Overflow Flag
+            end
+
+            4'b0001: begin  // Subtração
+                {NZVC[0], Result} = A - B;
+                NZVC[3] = Result[7];
+                NZVC[2] = (Result == 8'h00) ? 1 : 0;
+                NZVC[1] = ((A[7] != B[7]) && (A[7] != Result[7])) ? 1 : 0;
+            end
+
+            4'b0010: begin  // Multiplicação
+                TempResult = A * B;
+                Result = TempResult[7:0];
+                NZVC[3] = Result[7];
+                NZVC[2] = (Result == 8'h00) ? 1 : 0;
+                NZVC[1] = (TempResult > 8'hFF) ? 1 : 0;  // Overflow Flag
+                NZVC[0] = 0;  // Carry Flag não se aplica
+            end
+
+            4'b0011: begin  // Divisão
+                if (B != 0) begin
+                    Result = A / B;
+                    NZVC[3] = Result[7];
+                    NZVC[2] = (Result == 8'h00) ? 1 : 0;
+                    NZVC[1] = 0;  // Overflow não se aplica
+                    NZVC[0] = 0;  // Carry não se aplica
+                end else begin
+                    Result = 8'hFF;  // Indicador de erro para divisão por zero
+                    NZVC = 4'b1111;  // Flags indicativas de erro
+                end
+            end
+
+            4'b0100: begin  // Resto da divisão (Módulo)
+                if (B != 0) begin
+                    Result = A % B;
+                    NZVC[3] = Result[7];
+                    NZVC[2] = (Result == 8'h00) ? 1 : 0;
+                end else begin
+                    Result = 8'hFF;
+                    NZVC = 4'b1111;
+                end
+            end
+
+            4'b0101: begin  // Comparação (A == B)
+                Result = 8'h00;  // Resultado nulo para comparação
+                NZVC[3] = 0;
+                NZVC[2] = (A == B) ? 1 : 0;
+                NZVC[1] = 0;
+                NZVC[0] = 0;
+            end
+
+            4'b0110: Result = A & B;  // E (AND)
+            4'b0111: Result = A | B;  // OU (OR)
+            4'b1000: Result = ~A;     // Negacao (NOT)
+            4'b1001: Result = A ^ B;  // OU-exclusivo (XOR)
+
+            default: begin
+                Result = 8'hXX;
+                NZVC = 4'hX;
+            end
         endcase
 
-        // Calculação de Flags
-        flags[7] = resultado[7]; // Negativo
-        flags[6] = (resultado == 8'h00); // Zero
-        flags[5] = carry_out; // Carry
-        flags[4] = ^resultado; // Paridade (XOR de todos os bits)
-        flags[3] = 0; // Interrupção (Reservado para uso futuro)
-        flags[2] = 0; // Direção (Reservado para uso futuro)
-        flags[1] = (operacao == 4'b0000 && ((A[7] & B[7] & ~resultado[7]) || (~A[7] & ~B[7] & resultado[7]))); // Overflow
-        flags[0] = 0; // Reservado
+        // Atualização de Flags pós-operações lógicas, quando aplicável
+        if (ALU_Sel >= 4'b0110 && ALU_Sel <= 4'b1001) begin
+            NZVC[3] = Result[7];                 // Negative Flag
+            NZVC[2] = (Result == 8'h00) ? 1 : 0; // Zero Flag
+            NZVC[1] = 0;                         // Overflow não se aplica
+            NZVC[0] = 0;                         // Carry não se aplica
+        end
     end
+
 endmodule
