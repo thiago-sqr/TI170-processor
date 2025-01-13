@@ -179,25 +179,25 @@ module unidade_controle(
                     PC_inc <= 1;
                 end
                 4'h2: begin // ADD
-                    alu_sel <= 4'b0000;
+                    alu_sel <= 4'h0;
                     A_load <= 1;
                     CCR_load <= 1;
                     PC_inc <= 1;
                 end
                 4'h3: begin // SUB
-                    alu_sel <= 4'b0001;
+                    alu_sel <= 4'h1;
                     A_load <= 1;
                     CCR_load <= 1;
                     PC_inc <= 1;
                 end
                 4'h4: begin // MUL
-                    alu_sel <= 4'b1000;
+                    alu_sel <= 4'h8;
                     A_load <= 1;
                     CCR_load <= 1;
                     PC_inc <= 1;
                 end
                 4'h5: begin // DIV
-                    alu_sel <= 4'b1001;
+                    alu_sel <= 4'h9;
                     A_load <= 1;
                     CCR_load <= 1;
                     PC_inc <= 1;
@@ -217,37 +217,37 @@ module unidade_controle(
                     PC_load <= 1;
                 end
                 4'hA: begin // AND
-                    alu_sel <= 4'b0010;
+                    alu_sel <= 4'h2;
                     A_load <= 1;
                     CCR_load <= 1;
                     PC_inc <= 1;
                 end
                 4'hB: begin // OR
-                    alu_sel <= 4'b0011;
+                    alu_sel <= 4'h3;
                     A_load <= 1;
                     CCR_load <= 1;
                     PC_inc <= 1;
                 end
                 4'hC: begin // XOR
-                    alu_sel <= 4'b0100;
+                    alu_sel <= 4'h4;
                     A_load <= 1;
                     CCR_load <= 1;
                     PC_inc <= 1;
                 end
                 4'hD: begin // NOT
-                    alu_sel <= 4'b0101;
+                    alu_sel <= 4'h5;
                     A_load <= 1;
                     CCR_load <= 1;
                     PC_inc <= 1;
                 end
                 4'hE: begin // SHIFT LEFT
-                    alu_sel <= 4'b0110;
+                    alu_sel <= 4'h6;
                     A_load <= 1;
                     CCR_load <= 1;
                     PC_inc <= 1;
                 end
                 4'hF: begin // SHIFT RIGHT
-                    alu_sel <= 4'b0111;
+                    alu_sel <= 4'h7;
                     A_load <= 1;
                     CCR_load <= 1;
                     PC_inc <= 1;
