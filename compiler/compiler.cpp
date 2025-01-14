@@ -14,9 +14,15 @@ struct info {
 };
 
 map<string, info> mnemonics = {
-    { "ADD", info{"00000001", 2} },
-    { "SUB", info{"00000010", 2} },
-    { "NOT", info{"11111111", 1} }
+    { "INC", info{"00000001", 1} }, // incremento
+    { "DEC", info{"00000010", 1} }, // decremento
+    { "NOT", info{"00000011", 1} }, // negação
+    { "JMP", info{"00000100", 1} }, // salto (avança instruções, ignorando intermediárias)
+    { "ADD", info{"00010000", 2} }, // adição
+    { "SUB", info{"00100000", 2} }, // subtração
+    { "MUL", info{"00110000", 2} }, // multiplicação
+    { "DIV", info{"01000000", 2} }, // divisão
+    { "MOD", info{"01010000", 2} }, // resto da divisão
     // adicionar mais mnemonicos aqui...
 };
 
