@@ -9,7 +9,7 @@ module file_reader(
 
     // Inicializando o arquivo com dados binários
     initial begin
-      $readmemb("arquivobinario.bin", file_memory); // Lê o arquivo binário
+        $readmemb("file.bin", file_memory); // Lê o arquivo binário
         line_counter = 0;
     end
 
