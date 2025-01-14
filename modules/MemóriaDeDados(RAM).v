@@ -7,13 +7,13 @@ module data_memory(RAM) (
     output reg [7:0] data_out   // Dados de saída da memória
 );
 
-    // Declaração da memória de dados (endereço de 128 a 223)
-    reg [7:0] RW[128:223];
+    // Declaração da memória de dados (endereço de 0 a 127)
+    reg [7:0] RW[0:127];
 
     // Habilitação interna da memória de dados
     reg EN;
     always @ (address) begin
-        if ((address >= 128) && (address <= 223)) 
+        if ((address >= 0) && (address <= 127)) 
             EN = 1'b1;
         else 
             EN = 1'b0;
