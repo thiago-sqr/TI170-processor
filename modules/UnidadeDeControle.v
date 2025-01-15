@@ -5,7 +5,9 @@ module control_unit (
     input CCR_Result,          // Resultado do registrador de condições (CCR)
     output reg IR_Load,        // Sinal para carregar o registrador de instrução
     output reg MAR_Load,       // Sinal para carregar o registrador de endereço de memória
+    output reg MARR_Load,       // Sinal para carregar o registrador de endereço de memória da resposta
     output reg PC_Load,        // Sinal para carregar o registrador de contador de programa (PC)
+    output reg PR_Load,        // Sinal para carregar o registrador de contador de resposta (PR)
     output reg PC_Inc,         // Sinal para incrementar o PC
     output reg A_Load,         // Sinal para carregar o registrador A
     output reg B_Load,         // Sinal para carregar o registrador B
@@ -32,7 +34,7 @@ module control_unit (
 
     parameter ALU_7 = 24, JMP = 25;                                        // Executam operações após coleta de instrução e operando(s)
     
-    parameter S_STB_DIR_4 = 32, S_STB_DIR_5 = 33;                          // Guardam o valor do Registrador C na memória 
+    parameter S_STC_DIR_8 = 32, S_STC_DIR_9 = 33, S_STC_DIR_10 = 34;      // Guardam o valor do Registrador C na memória 
 
     // Outros estados podem ser definidos conforme a necessidade...
 
@@ -65,6 +67,8 @@ module control_unit (
                 else                                next_state <= S_LDB_DIR_4;
             end
 
+            // Estados em que o Registrador B recebe um valor predefinido (sua única utilização atual
+            // é de receber 8'h01, utilizado para incremento ou decremento do operando A)
             S_LDB_IMM_4: next_stage <= S_LDB_IMM_5;
             S_LDB_IMM_5: next_stage <= S_LDB_IMM_6;
             
@@ -76,6 +80,13 @@ module control_unit (
                 else next_state <= ALU_7;
             end
 
+            // Estados que incorporam a saída C à memória de respostas; 
+            ALU_7: next_stage <=  S_STC_DIR_8;
+            S_STC_DIR_8: next_stage <= S_STC_DIR_9;
+            S_STC_DIR_9: next_stage <= S_STC_DIR_10;
+            S_STC_DIR_10: next_stage <= FETCH_0;
+
+            JMP_7:
             default: next_state <= S_FETCH_0;
         endcase
     end
@@ -89,7 +100,6 @@ module control_unit (
         PC_Inc = 0;
         A_Load = 0;
         B_Load = 0;
-        ALU_Sel = 3'b000;
         CCR_Load = 0;
         Bus1_Sel = 2'b00;
         Bus2_Sel = 2'b00;
@@ -157,6 +167,20 @@ module control_unit (
                     8'h30: ALU_Sel = 4'h2;  // multiplicação
                     8'h40: ALU_Sel = 4'h3;  // divisão
                     8'h50: ALU_Sel = 4'h4;  // resto
+                    8'h60: ALU_Sel = 4'h6;  // AND
+                    8'h70: ALU_Sel = 4'h7;  // OR
+                    8'h80: ALU_Sel = 4'hA;  // XOR
+                    8'h90: ALU_Sel = 4'hB;  // NAND
+                    8'hA0: ALU_Sel = 4'hC;  // NOR
+                    8'hB0: ALU_Sel = 4'hD;  // XNOR
+                    8'hC0: ALU_Sel = 4'h5;  // comparação
+                endcase
+            end
+
+            JMP_7: begin
+                
+    
+            end
             // Outros estados conforme a lógica necessária
             default: begin
                 // Caso de fallback
