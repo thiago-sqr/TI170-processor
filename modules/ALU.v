@@ -42,7 +42,7 @@ module ALU (
 
     reg [8:0] TempResult;  // Definir TempResult com 9 bits
     
-    always @(*) begin
+    always @(ALU_Sel) begin
         // Inicializando as flags para zero antes de cada operação
         ALU_Cout = 1'b0;
         TempResult = 9'b0;  // Zera a variável TempResult (9 bits)
