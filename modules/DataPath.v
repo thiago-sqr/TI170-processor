@@ -1,10 +1,10 @@
 module caminho_dados (
     input wire clock, reset,
     input wire [1:0] Bus1_Sel, Bus2_Sel,
-    input wire PC_Load, PC_Inc, A_Load, B_Load, C_Load, IR_Load, MAR_Load, CCR_Load,
+    input wire PC_Load, PC_Inc, PR_Inc, A_Load, B_Load, C_Load, IR_Load, MAR_Load, MARR_Load, CCR_Load,
     input wire [7:0] ALU_Result, from_memory, NZVC,
     output reg [7:0] to_memory, address,
-    output reg [7:0] IR, A, B, C, PC, MAR, CCR_Result
+    output reg [7:0] IR, A, B, C, PC, MAR, PR, MARR, CCR_Result
 );
 
     // Barramentos
@@ -54,6 +54,14 @@ module caminho_dados (
             MAR <= Bus2;
     end
 
+    // Registrador de Endereço de Memória de Resposta (MARR)
+    always @(posedge clock or negedge reset) begin
+        if (!reset)
+            MARR <= 8'h00;
+        else if (MARR_Load)
+            MARR <= Bus2;
+    end
+
     // Contador de Programa (PC) com Incremento
     always @(posedge clock or negedge reset) begin
         if (!reset)
@@ -64,6 +72,14 @@ module caminho_dados (
             PC <= PC + 1;
     end
 
+    // Incremento de Contador de Resposta (PR)
+    always @(posedge clock or negedge reset) begin
+        if (!reset)
+            PR <= 8'h00;
+        else if (PR_Inc)
+            PR <= PR + 1;
+    end
+    
     // Registradores A, B e C
     always @(posedge clock or negedge reset) begin
         if (!reset)
