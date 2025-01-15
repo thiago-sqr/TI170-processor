@@ -91,9 +91,11 @@ module control_unit (
             // Estados que incorporam a saída C à memória de respostas; 
             S_STC_DIR_10: next_stage <=  S_STC_DIR_11;
             S_STC_DIR_11: next_stage <= S_STC_DIR_12;
-            S_STC_DIR_12: next_stage <= FETCH_0;
+            S_STC_DIR_12: next_stage <= S_FETCH_0;
 
-            JMP_7:
+            // Estado de Jump; apenas pula a quantidade de instruções pedidas;
+            JMP_7: next_stage <= S_ FETCH_0;
+            
             default: next_state <= S_FETCH_0;
         endcase
     end
@@ -187,8 +189,9 @@ module control_unit (
             end
 
             JMP_7: begin
-                
-    
+                PC_Load = 1;
+                Bus1_Sel = 3'b010;
+                Bus2_Sel = 2'b00;
             end
 
             S_STIR_DIR_8: begin
