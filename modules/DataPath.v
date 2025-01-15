@@ -1,10 +1,11 @@
 module caminho_dados (
     input wire clock, reset,
-    input wire [1:0] Bus1_Sel, Bus2_Sel,
+    input wire [2:0] Bus1_Sel,
+    input wire [1:0] Bus2_Sel,
     input wire PC_Load, PC_Inc, PR_Inc, A_Load, B_Load, C_Load, IR_Load, MAR_Load, MARR_Load, CCR_Load,
     input wire [7:0] ALU_Result, from_memory, NZVC,
     output reg [7:0] to_memory, address,
-    output reg [7:0] IR, A, B, C, PC, MAR, PR, MARR, CCR_Result
+    output reg [7:0] IR, A, B, C, PC, MAR, PR, CCR_Result
 );
 
     // Barramentos
@@ -13,10 +14,11 @@ module caminho_dados (
     // Multiplexador para Bus1
     always @(*) begin
         case (Bus1_Sel)
-            2'b00: Bus1 = PC;
-            2'b01: Bus1 = A;
-            2'b10: Bus1 = B;
-            2'b11: Bus1 = C;
+            3'b000: Bus1 = PC;
+            3'b001: Bus1 = A;
+            3'b010: Bus1 = B;
+            3'b011: Bus1 = C;
+            3'b100: Bus1 = PR;
             default: Bus1 = 8'hXX;
         endcase
     end
@@ -52,14 +54,6 @@ module caminho_dados (
             MAR <= 8'h00;
         else if (MAR_Load)
             MAR <= Bus2;
-    end
-
-    // Registrador de Endereço de Memória de Resposta (MARR)
-    always @(posedge clock or negedge reset) begin
-        if (!reset)
-            MARR <= 8'h00;
-        else if (MARR_Load)
-            MARR <= Bus2;
     end
 
     // Contador de Programa (PC) com Incremento
