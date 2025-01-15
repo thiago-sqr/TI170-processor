@@ -101,14 +101,14 @@ module control_unit (
         A_Load = 0;
         B_Load = 0;
         CCR_Load = 0;
-        Bus1_Sel = 2'b00;
+        Bus1_Sel = 3'b000;
         Bus2_Sel = 2'b00;
         write = 0;
 
         case (current_state)
             S_FETCH_0: begin
                 MAR_Load = 1;  // Carregar endereço do opcode
-                Bus1_Sel = 2'b00; // "00" -> PC
+                Bus1_Sel = 3'b000; // "000" -> PC
             end
             S_FETCH_1: begin
                 PC_Inc = 1;  // Incrementar PC
@@ -120,7 +120,7 @@ module control_unit (
             
             S_LDA_DIR_4: begin
                 MAR_Load = 1;
-                Bus1_Sel = 2'b00;
+                Bus1_Sel = 3'b000;
             end
             S_LDA_DIR_5: begin
                 PC_Inc = 1;
@@ -133,7 +133,7 @@ module control_unit (
             
             S_LDB_DIR_4: begin
                 MAR_Load = 1;
-                Bus1_Sel = 2'b00;
+                Bus1_Sel = 3'b000;
             end
             S_LDB_DIR_5: begin
                 PC_Inc = 1;
@@ -142,7 +142,7 @@ module control_unit (
                 Bus2_Sel = 2'b10;
             end
             S_LDB_DIR_6: begin
-                Bus1_Sel = 2'b10;
+                Bus1_Sel = 3'b010;
                 Bus2_Sel = 2'b00;                
             end
 
