@@ -23,6 +23,12 @@ map<string, info> mnemonics = {
     { "MUL", info{"00110000", 2} }, // multiplicação
     { "DIV", info{"01000000", 2} }, // divisão
     { "MOD", info{"01010000", 2} }, // resto da divisão
+    { "AND", info{"01100000", 2} }, // AND
+    { "OR" , info{"01110000", 2} }, // OR
+    { "XOR", info{"10000000", 2} }, // XOR
+    {"NAND", info{"10010000", 2} }, // NAND
+    { "NOR", info{"10100000", 2} }, // NOR
+    {"XNOR", info{"10110000", 2} } // XNOR
     // adicionar mais mnemonicos aqui...
 };
 
