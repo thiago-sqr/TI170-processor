@@ -2,7 +2,7 @@ module caminho_dados (
     input wire clock, reset,
     input wire [2:0] Bus1_Sel,
     input wire [1:0] Bus2_Sel,
-    input wire PC_Load, PC_Inc, PR_Inc, A_Load, B_Load, C_Load, IR_Load, MAR_Load, MARR_Load, CCR_Load,
+    input wire PC_Load, PC_Inc, PR_Inc, A_Load, B_Load, C_Load, IR_Load, MAR_Load, CCR_Load, Memory_Load,
     input wire [7:0] ALU_Result, from_memory, NZVC,
     output reg [7:0] to_memory, address,
     output reg [7:0] IR, A, B, C, PC, MAR, PR, CCR_Result
@@ -19,6 +19,7 @@ module caminho_dados (
             3'b010: Bus1 = B;
             3'b011: Bus1 = C;
             3'b100: Bus1 = PR;
+            3'b101: Bus1 = IR;
             default: Bus1 = 8'hXX;
         endcase
     end
@@ -35,9 +36,11 @@ module caminho_dados (
     end
 
     // Conexão de memória
-    always @(*) begin
-        to_memory = Bus1;
-        address = MAR;
+    always @(posedge clock or negedge reset) begin
+        if(Memory_Load) begin
+            to_memory = Bus1;
+            address = MAR;
+        end
     end
 
     // Registrador de Instrução (IR)
