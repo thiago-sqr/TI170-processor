@@ -28,7 +28,8 @@ map<string, info> mnemonics = {
     { "XOR", info{"10000000", 2} }, // XOR
     {"NAND", info{"10010000", 2} }, // NAND
     { "NOR", info{"10100000", 2} }, // NOR
-    {"XNOR", info{"10110000", 2} } // XNOR
+    {"XNOR", info{"10110000", 2} }, // XNOR
+    {"COMP", info{"11000000", 2} } // Comparação
     // adicionar mais mnemonicos aqui...
 };
 
