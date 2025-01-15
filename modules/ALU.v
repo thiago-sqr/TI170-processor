@@ -80,6 +80,29 @@ module MULTIPLICADOR_8BITS (
     end
 endmodule
 
+module COMPARADOR (
+    input [7:0] A, B,
+    output reg [1:0] comparacao_resultado
+);
+
+    reg [7:0] diferenca; // Variável para armazenar a diferença entre A e B
+    reg sinal_diferenca; // Variável para armazenar o sinal da diferença
+    
+    always @(*) begin
+        diferenca = A - B; // Subtrai A por B
+        sinal_diferenca = diferenca[7]; // Verifica o bit de sinal da diferença (bit mais significativo)
+        
+        // Verifica o sinal da diferença para determinar o resultado da comparação
+        if (sinal_diferenca == 0 && diferenca != 0) begin
+            comparacao_resultado = 2'b01;  // A é maior
+        end else if (sinal_diferenca == 1) begin
+            comparacao_resultado = 2'b10;  // A é menor
+        end else begin
+            comparacao_resultado = 2'b00;  // A é igual a B
+        end
+    end
+endmodule
+
 module ALU (
     input wire [7:0] A, B,             // Operandos de entrada
     input wire [3:0] ALU_Sel,          // Sinal de seleção da operação
@@ -91,20 +114,15 @@ module ALU (
 
     wire [7:0] Soma, Subtracao, Quociente, Resto;
     wire Soma_Cout, Sub_Cout;
-     wire [15:0] Produto;                // Variável para armazenar o produto da multiplicação
+    wire [15:0] Produto;                // Variável para armazenar o produto da multiplicação
+    wire [1:0] comparacao_resultado_int; // Resultado interno de comparação
 
-    // Instanciação dos módulos de soma e subtração
+    // Instanciação dos módulos
     SOMADOR_8BITS somador_inst (A, B, 1'b0, Soma, Soma_Cout);
     SOMADOR_8BITS subtrator_inst (A, ~B, 1'b1, Subtracao, Sub_Cout);
     MULTIPLICADOR_8BITS multiplicador_inst (A, B, Produto);
-
-    // Instanciação do módulo de divisão
-    DIVISOR_8BITS divisor_inst (
-        .Dividend(A),
-        .Divisor(B),
-        .Quociente(Quociente),
-        .Resto(Resto)
-    );
+    DIVISOR_8BITS divisor_inst (.Dividend(A),.Divisor(B),.Quociente(Quociente),.Resto(Resto));
+    COMPARADOR comparador_inst (.A(A),.B(B),.comparacao_resultado(comparacao_resultado_int));
     
     always @(*) begin
         // Inicializando as flags para zero antes de cada operação
@@ -164,7 +182,7 @@ module ALU (
 
             4'h4: begin  // Resto da divisão (Módulo)
                 if (B != 0) begin
-                     C = Resto;
+                    C = Resto;
                     Flags[6] = 0; //Não há chances de ser ativada
                     Flags[5] = 0; //Não há chances de ser ativada
                     Flags[4] = 0; //Não há chances de ser ativada
@@ -187,15 +205,8 @@ module ALU (
                 Flags[2] = (A == B) ? 1 : 0; // Zero Flag
                 Flags[1] = 0; //Não há chances de ser ativada
                 Flags[0] = 0; //Não há chances de ser ativada
-
-                // Atualizando o registrador de comparação
-                if (A > B) begin
-                    comparacao_resultado = 2'b01;  // A é maior
-                end else if (A < B) begin
-                    comparacao_resultado = 2'b10;  // A é menor
-                end else begin
-                    comparacao_resultado = 2'b00;  // A é igual a B
-                end
+                // Usando o módulo de comparação baseado em subtração
+                comparacao_resultado = comparacao_resultado_int;  // Passa o resultado do comparador
             end
             
             4'h6: begin  // AND
