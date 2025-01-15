@@ -31,6 +31,41 @@ module SOMADOR_8BITS (A, B, Cin, Soma, Cout);
     assign Cout = Carry[7];  // Carry-out (overflow)
 endmodule
 
+module DIVISOR_8BITS (
+    input [7:0] Dividend, Divisor,
+    output reg [7:0] Quociente,
+    output reg [7:0] Resto
+);
+    always @(*) begin
+        if (Divisor != 0) begin
+            Quociente = Dividend / Divisor;
+            Resto = Dividend % Divisor;
+        end else begin
+            Quociente = 8'hFF; // Indicador de erro
+            Resto = 8'hFF;     // Indicador de erro
+        end
+    end
+endmodule
+
+module MULTIPLICADOR_8BITS (
+    input [7:0] A, B,               // Entradas A e B para multiplicação
+    output reg [15:0] Produto       // Resultado da multiplicação (16 bits)
+);
+    integer i;                      // Índice para o loop
+    reg [15:0] temp;                // Variável temporária para armazenar o resultado
+
+    always @(*) begin
+        Produto = 16'b0;            // Inicializa o Produto como 0
+        temp = {8'b0, A};           // Expande A para 16 bits
+
+        for (i = 0; i < 8; i = i + 1) begin
+            if (B[i]) begin          // Se o bit i de B for 1
+                Produto = Produto + (temp << i); // Adiciona A deslocado
+            end
+        end
+    end
+endmodule
+
 module ALU (
     input wire [7:0] A, B,             // Operandos de entrada
     input wire [3:0] ALU_Sel,          // Sinal de seleção da operação
@@ -40,21 +75,32 @@ module ALU (
     output reg ALU_Cout               // Carry-out da soma
 );
 
-    reg [8:0] TempResult;  // Definir TempResult com 9 bits
+    wire [7:0] Soma, Subtracao, Quociente, Resto;
+    wire Soma_Cout, Sub_Cout;
+     wire [15:0] Produto;                // Variável para armazenar o produto da multiplicação
+
+    // Instanciação dos módulos de soma e subtração
+    SOMADOR_8BITS somador_inst (A, B, 1'b0, Soma, Soma_Cout);
+    SOMADOR_8BITS subtrator_inst (A, ~B, 1'b1, Subtracao, Sub_Cout);
+    MULTIPLICADOR_8BITS multiplicador_inst (A, B, Produto);
+
+    // Instanciação do módulo de divisão
+    DIVISOR_8BITS divisor_inst (
+        .Dividend(A),
+        .Divisor(B),
+        .Quociente(Quociente),
+        .Resto(Resto)
+    );
     
-    always @(ALU_Sel) begin
+    always @(*) begin
         // Inicializando as flags para zero antes de cada operação
-        ALU_Cout = 1'b0;
-        TempResult = 9'b0;  // Zera a variável TempResult (9 bits)
         Flags = 7'b0000000;
         comparacao_resultado = 2'b00;
         
         case (ALU_Sel)
             4'h0: begin  // Soma
-                TempResult = A + B;
-                C = TempResult[7:0];
-                ALU_Cout = TempResult[8];  // Carry-out
-                Flags[5] = ALU_Cout;  // Carry Flag
+                C = Soma;
+                Flags[5] = Soma_Cout;  // Carry Flag
                 Flags[6] = C[7];   // Sinal (bit mais significativo)
                 Flags[4] = (C == 8'h00) ? 1 : 0;  // Zero Flag
                 Flags[3] = (^C);  // Paridade (XOR de todos os bits)
@@ -65,9 +111,7 @@ module ALU (
 
             4'h1: begin  // Subtração
                 // A - B = A + (~B) + 1
-                TempResult = A + (~B) + 1;
-                C = TempResult[7:0];
-                ALU_Cout = TempResult[8];
+                C = Subtracao;
                 Flags[5] = (A < B) ? 1 : 0;  // Carry Flag (não aplicável diretamente na subtração, mas pode indicar underflow)
                 Flags[6] = C[7];   // Sinal
                 Flags[4] = (C == 8'h00) ? 1 : 0;  // Zero Flag
@@ -78,24 +122,23 @@ module ALU (
             end
 
             4'h2: begin  // Multiplicação
-                TempResult = A * B;
-                C = TempResult[7:0];
+                C = Produto[7:0];
                 Flags[6] = 0; //Não há chances de ser ativada
                 Flags[5] = 0; //Não há chances de ser ativada
-                Flags[4] = 0; //Não há chances de ser ativada
-                Flags[3] = C[7];
-                Flags[2] = (C == 8'h00) ? 1 : 0;
-                Flags[1] = (TempResult > 8'hFF) ? 1 : 0;  // Overflow Flag
-                Flags[0] = 0;  // Carry Flag não se aplica
+                Flags[4] = (C == 8'h00) ? 1 : 0;  // Zero Flag
+                Flags[3] = (^C);  // Paridade
+                Flags[2] = (Produto[15:8] != 0) ? 1 : 0;  // Overflow Flag (Se os 8 bits mais significativos forem diferentes de 0, houve overflow)
+                Flags[1] = 0; //Não há chances de ser ativada
+                Flags[0] = 0; //Não há chances de ser ativada
             end
 
             4'h3: begin  // Divisão
                 if (B != 0) begin
-                    C = A / B;
+                    C = Quociente;
                     Flags[6] = 0; //Não há chances de ser ativada
                     Flags[5] = 0; //Não há chances de ser ativada
-                    Flags[4] = 0; //Não há chances de ser ativada
-                    Flags[3] = C[7];
+                    Flags[4] = (C == 8'h00) ? 1 : 0;  // Zero Flag
+                    Flags[3] = (^C);  // Paridade
                     Flags[2] = (C == 8'h00) ? 1 : 0;
                     Flags[1] = 0;  // Overflow não se aplica
                     Flags[0] = 0;  // Carry não se aplica
@@ -107,14 +150,14 @@ module ALU (
 
             4'h4: begin  // Resto da divisão (Módulo)
                 if (B != 0) begin
-                    C = A % B;
+                     C = Resto;
                     Flags[6] = 0; //Não há chances de ser ativada
                     Flags[5] = 0; //Não há chances de ser ativada
                     Flags[4] = 0; //Não há chances de ser ativada
-                    Flags[3] = C[7];
+                    Flags[3] = (^C);  // Paridade
                     Flags[2] = (C == 8'h00) ? 1 : 0;
-                    Flags[1] = 0;  // Overflow não se aplica
-                    Flags[0] = 0;  // Carry não se aplica
+                    Flags[1] = 0; //Não há chances de ser ativada
+                    Flags[0] = 0; //Não há chances de ser ativada
                 end else begin
                     C = 8'hFF;
                     Flags = 7'h7F;
@@ -128,8 +171,8 @@ module ALU (
                 Flags[4] = 0; //Não há chances de ser ativada
                 Flags[3] = 0;
                 Flags[2] = (A == B) ? 1 : 0; // Zero Flag
-                Flags[1] = 0;
-                Flags[0] = 0;
+                Flags[1] = 0; //Não há chances de ser ativada
+                Flags[0] = 0; //Não há chances de ser ativada
 
                 // Atualizando o registrador de comparação
                 if (A > B) begin
