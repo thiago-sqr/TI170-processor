@@ -36,10 +36,24 @@ module DIVISOR_8BITS (
     output reg [7:0] Quociente,
     output reg [7:0] Resto
 );
+
+    integer i; // Variável para contagem
+    reg [7:0] temp_dividend; // Variável para armazenar o dividendo durante a iteração
+    
     always @(*) begin
         if (Divisor != 0) begin
-            Quociente = Dividend / Divisor;
-            Resto = Dividend % Divisor;
+            Quociente = 0;
+            Resto = Dividend;
+            temp_dividend = Dividend;
+            
+            // Subtração sucessiva
+            for (i = 0; i < 8; i = i + 1) begin
+                if (temp_dividend >= Divisor) begin
+                    temp_dividend = temp_dividend - Divisor;
+                    Quociente = Quociente + 1;
+                end
+            end
+            Resto = temp_dividend; // O valor restante é o resto
         end else begin
             Quociente = 8'hFF; // Indicador de erro
             Resto = 8'hFF;     // Indicador de erro
