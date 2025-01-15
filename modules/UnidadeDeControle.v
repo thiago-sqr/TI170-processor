@@ -98,6 +98,7 @@ module control_unit (
         MAR_Load = 0;
         PC_Load = 0;
         PC_Inc = 0;
+        PR_Inc = 0;
         A_Load = 0;
         B_Load = 0;
         CCR_Load = 0;
@@ -183,9 +184,16 @@ module control_unit (
             end
 
             S_STC_DIR_8: begin
-                Bus2_Sel = 8'h
                 C_Load = 1;
+                Bus2_Sel = 2'b11;
             end
+            S_STC_DIR_9: begin
+                MAR_Load;
+                Bus1_Sel = 3'b100;
+                Bus2_Sel = 2'b00;
+            end
+            S_STC_DIR_10: begin
+                PR_Inc = 1;
 
             // Outros estados conforme a lógica necessária
             default: begin
