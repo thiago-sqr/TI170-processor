@@ -64,7 +64,7 @@ module caminho_dados (
         if (!reset)
             PC <= 8'h00;
         else if (PC_Load)
-            PC <= Bus2;
+            PC <= PC + Bus2;
         else if (PC_Inc)
             PC <= PC + 1;
     end
