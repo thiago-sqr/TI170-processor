@@ -1,7 +1,8 @@
+`timescale 1ns / 1ps
+
 module somador_completo (A, B, Cin, S, Cout);
     input A, B, Cin;        // Entradas do somador completo
     output S, Cout;         // Soma e carry out
-
     assign S = A ^ B ^ Cin;         // Soma
     assign Cout = (A & B) | (B & Cin) | (A & Cin);  // Carry
 endmodule
@@ -35,22 +36,24 @@ module ALU (
     input wire [3:0] ALU_Sel,          // Sinal de seleção da operação
     output reg [7:0] C,           // Resultado da operação
     output reg [6:0] Flags,             // Flags: (6) Sinal, (5) Carry, (4) Zero, (3) Paridade, (2) Overflow, (1) Interrupção (0) Direção
-    output reg [1:0] comparacao_resultado // Resultado da comparação: 00 - A == B, 01 - A > B, 10 - A < B
-    output reg ALU_Cout                 //Cout da Soma
+    output reg [1:0] comparacao_resultado, // Resultado da comparação: 00 - A == B, 01 - A > B, 10 - A < B
+    output reg ALU_Cout               // Carry-out da soma
 );
 
-    reg [15:0] TempResult;  // Variável auxiliar para operações que geram resultados maiores que 8 bits
-
+    reg [8:0] TempResult;  // Definir TempResult com 9 bits
+    
     always @(*) begin
-
         // Inicializando as flags para zero antes de cada operação
+        ALU_Cout = 1'b0;
+        TempResult = 9'b0;  // Zera a variável TempResult (9 bits)
         Flags = 7'b0000000;
         comparacao_resultado = 2'b00;
         
         case (ALU_Sel)
             4'h0: begin  // Soma
-                SOMADOR_8BITS U1 (A, B, 1'b0, TempResult, ALU_Cout);  // Soma com carry-in 0
-                C = TempResult;
+                TempResult = A + B;
+                C = TempResult[7:0];
+                ALU_Cout = TempResult[8];  // Carry-out
                 Flags[5] = ALU_Cout;  // Carry Flag
                 Flags[6] = C[7];   // Sinal (bit mais significativo)
                 Flags[4] = (C == 8'h00) ? 1 : 0;  // Zero Flag
@@ -62,9 +65,10 @@ module ALU (
 
             4'h1: begin  // Subtração
                 // A - B = A + (~B) + 1
-                SOMADOR_8BITS U2 (A, ~B, 1'b1, TempResult, Cout);  // Somar A com o complemento de 2 de B
-                C = TempResult;
-                Flags[5] = Cout;  // Carry Flag (não aplicável diretamente na subtração, mas pode indicar underflow)
+                TempResult = A + (~B) + 1;
+                C = TempResult[7:0];
+                ALU_Cout = TempResult[8];
+                Flags[5] = (A < B) ? 1 : 0;  // Carry Flag (não aplicável diretamente na subtração, mas pode indicar underflow)
                 Flags[6] = C[7];   // Sinal
                 Flags[4] = (C == 8'h00) ? 1 : 0;  // Zero Flag
                 Flags[3] = (^C);  // Paridade
@@ -137,14 +141,93 @@ module ALU (
                 end
             end
             
-            4'h6: C = A & B;  // E (AND)
-            4'h7: C = A | B;  // OU (OR)
-            4'h8: C = ~A;     // Negação (NOT)
-            4'h9: C = ~B;     // Negação (NOT)
-            4'hA: C = A ^ B;  // OU-exclusivo (XOR)
-            4'hB: C = ~(A & B);  // NAND (NOT AND)
-            4'hC: C = ~(A | B);  // NOR (NOT OR)
-            4'hD: C = ~(A ^ B);  // XNOR (NOT XOR)
+            4'h6: begin  // AND
+                C = A & B;
+                Flags[6] = C[7];                     // Sinal Flag
+                Flags[5] = 0;                        // Carry Flag (não aplicável)
+                Flags[4] = (C == 8'h00) ? 1 : 0;     // Zero Flag
+                Flags[3] = (^C);                    // Paridade Flag
+                Flags[2] = 0;                        // Overflow Flag (não aplicável)
+                Flags[1] = 0;                        // Interrupção (não aplicável)
+                Flags[0] = 0;                        // Direção (não aplicável)
+            end
+            
+            4'h7: begin  // OR
+                C = A | B;
+                Flags[6] = C[7];                     // Sinal Flag
+                Flags[5] = 0;                        // Carry Flag (não aplicável)
+                Flags[4] = (C == 8'h00) ? 1 : 0;     // Zero Flag
+                Flags[3] = (^C);                    // Paridade Flag
+                Flags[2] = 0;                        // Overflow Flag (não aplicável)
+                Flags[1] = 0;                        // Interrupção (não aplicável)
+                Flags[0] = 0;                        // Direção (não aplicável)
+            end
+            
+            4'h8: begin  // NOT A
+                C = ~A;
+                Flags[6] = C[7];                     // Sinal Flag
+                Flags[5] = 0;                        // Carry Flag (não aplicável)
+                Flags[4] = (C == 8'h00) ? 1 : 0;     // Zero Flag
+                Flags[3] = (^C);                    // Paridade Flag
+                Flags[2] = 0;                        // Overflow Flag (não aplicável)
+                Flags[1] = 0;                        // Interrupção (não aplicável)
+                Flags[0] = 0;                        // Direção (não aplicável)
+            end
+            
+            4'h9: begin  // NOT B
+                C = ~B;
+                Flags[6] = C[7];                     // Sinal Flag
+                Flags[5] = 0;                        // Carry Flag (não aplicável)
+                Flags[4] = (C == 8'h00) ? 1 : 0;     // Zero Flag
+                Flags[3] = (^C);                    // Paridade Flag
+                Flags[2] = 0;                        // Overflow Flag (não aplicável)
+                Flags[1] = 0;                        // Interrupção (não aplicável)
+                Flags[0] = 0;                        // Direção (não aplicável)
+            end
+            
+            4'hA: begin  // XOR
+                C = A ^ B;
+                Flags[6] = C[7];                     // Sinal Flag
+                Flags[5] = 0;                        // Carry Flag (não aplicável)
+                Flags[4] = (C == 8'h00) ? 1 : 0;     // Zero Flag
+                Flags[3] = (^C);                    // Paridade Flag
+                Flags[2] = 0;                        // Overflow Flag (não aplicável)
+                Flags[1] = 0;                        // Interrupção (não aplicável)
+                Flags[0] = 0;                        // Direção (não aplicável)
+            end
+            
+            4'hB: begin  // NAND
+                C = ~(A & B);
+                Flags[6] = C[7];                     // Sinal Flag
+                Flags[5] = 0;                        // Carry Flag (não aplicável)
+                Flags[4] = (C == 8'h00) ? 1 : 0;     // Zero Flag
+                Flags[3] = (^C);                    // Paridade Flag
+                Flags[2] = 0;                        // Overflow Flag (não aplicável)
+                Flags[1] = 0;                        // Interrupção (não aplicável)
+                Flags[0] = 0;                        // Direção (não aplicável)
+            end
+            
+            4'hC: begin  // NOR
+                C = ~(A | B);
+                Flags[6] = C[7];                     // Sinal Flag
+                Flags[5] = 0;                        // Carry Flag (não aplicável)
+                Flags[4] = (C == 8'h00) ? 1 : 0;     // Zero Flag
+                Flags[3] = (^C);                    // Paridade Flag
+                Flags[2] = 0;                        // Overflow Flag (não aplicável)
+                Flags[1] = 0;                        // Interrupção (não aplicável)
+                Flags[0] = 0;                        // Direção (não aplicável)
+            end
+            
+            4'hD: begin  // XNOR
+                C = ~(A ^ B);
+                Flags[6] = C[7];                     // Sinal Flag
+                Flags[5] = 0;                        // Carry Flag (não aplicável)
+                Flags[4] = (C == 8'h00) ? 1 : 0;     // Zero Flag
+                Flags[3] = (^C);                    // Paridade Flag
+                Flags[2] = 0;                        // Overflow Flag (não aplicável)
+                Flags[1] = 0;                        // Interrupção (não aplicável)
+                Flags[0] = 0;                        // Direção (não aplicável)
+            end
 
             default: begin
                 C = 8'hXX;
