@@ -181,6 +181,12 @@ module control_unit (
                 
     
             end
+
+            S_STC_DIR_8: begin
+                Bus2_Sel = 8'h
+                C_Load = 1;
+            end
+
             // Outros estados conforme a lógica necessária
             default: begin
                 // Caso de fallback
