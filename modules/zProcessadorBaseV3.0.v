@@ -6,7 +6,7 @@
 
 module file_reader(
     input wire clock, reset, read,
-    output reg [7:0] data_out,   // Dados lidos do arquivo
+    output reg [7:0] data_out   // Dados lidos do arquivo
     
 );
     // Memória simulando um arquivo externo
@@ -35,7 +35,7 @@ endmodule
 // MÓDULO 2: MEMÓRIA DE DADOS, O PRINCIPAL REGISTRADOR DO PROCESSADOR
 //===================================================================================================================================
 
-module data_memory(RAM) (
+module data_memory(
     input clock,                // Sinal de clock
     input reset,                // Sinal de reset ativo baixo
     input [7:0] address,        // Endereço de memória
@@ -197,14 +197,14 @@ module control_unit (
     output reg PC_Load,        // Sinal para carregar o registrador de contador de programa (PC)
     output reg PR_Load,        // Sinal para carregar o registrador de contador de resposta (PR)
     output reg PC_Inc,         // Sinal para incrementar o PC
-    output reg Memory_Load     // Sinal para carregar uma informação na memória de dados (RAM)
+    output reg Memory_Load,     // Sinal para carregar uma informação na memória de dados (RAM)
     output reg A_Load,         // Sinal para carregar o registrador A
     output reg B_Load,         // Sinal para carregar o registrador B
     output reg [3:0] ALU_Sel,  // Seleção da ALU
     output reg CCR_Load,       // Sinal para carregar o registrador de condições
     output reg [1:0] Bus1_Sel, // Seleção para o barramento 1
     output reg [1:0] Bus2_Sel, // Seleção para o barramento 2
-    output reg write           // Sinal de escrita em memória ou registradores
+    output reg write,           // Sinal de escrita em memória ou registradores
     output reg file_finished   // Sinal para indicar que o arquivo foi terminado, iniciando a criação do arquivo de resposta
 );
 
@@ -258,7 +258,7 @@ module control_unit (
             S_LDA_DIR_5: next_state <= S_LDA_DIR_6;
             S_LDA_DIR_6: begin
                 if(IR == 8'h03)                     next_state <= ALU_7;
-                else if(IR == 8'h01 or IR == 8'h02) next_state <= S_LDB_IMM_4;
+                else if(IR == 8'h01 || IR == 8'h02) next_state <= S_LDB_IMM_4;
                 else                                next_state <= S_LDB_DIR_4;
             end
 
@@ -407,12 +407,12 @@ module control_unit (
                 C_Load = 1;
                 Bus2_Sel = 2'b11;
             end
-            S_STC_DIR_11 begin
+            S_STC_DIR_11: begin
                 MAR_Load = 1;
                 Bus1_Sel = 3'b100;
                 Bus2_Sel = 2'b00;
             end
-            S_STC_DIR_12 begin
+            S_STC_DIR_12: begin
                 Memory_Load = 1;
                 write = 1;
                 Bus1_Sel = 3'b011;
@@ -424,19 +424,19 @@ module control_unit (
                 Bus1_Sel = 3'010;
                 Bus2_Sel = 2'b00;
             end
-            S_STB_DIR_11 begin
+            S_STB_DIR_11: begin
                 MAR_Load = 1;
                 Bus1_Sel = 3'b100;
                 Bus2_Sel = 2'b00;
             end
-            S_STB_DIR_12 begin
+            S_STB_DIR_12: begin
                 Memory_Load = 1;
                 write = 1;
                 Bus1_Sel = 3'b010;
                 PR_Inc = 1;
             end
 
-            END_OF_ALL begin
+            END_OF_ALL: begin
                 file_finished = 1;
             end
             // Outros estados conforme a lógica necessária
@@ -766,7 +766,7 @@ module answer_writer(
     input wire reset,
     input wire [7:0] data_in[0:127],    // Dados de entrada para escrever no arquivo
     input wire write_enable,      // Sinal para habilitar a escrita
-    input reg  answer_size       // indica a quantidade de linhas a serem escritas
+    input reg  answer_size,       // indica a quantidade de linhas a serem escritas
     output reg done             // Indica quando a escrita está concluída
     
 );
@@ -788,7 +788,7 @@ module answer_writer(
         if (reset) begin
             done <= 0;  // Reiniciar estado de finalização
         end else if (write_enable) begin
-            integer i
+            integer i;
             for(i = 0; i < PR; i = i + 1) begin
                 $fwrite(file_id, "%c", data_in[i]); // Escreve os dados no arquivo como binário
                 $display("Dado escrito: %0h", data_in); // Mensagem para depuração
@@ -886,7 +886,7 @@ module processador8bits(
     caminho_dados DatPat_inst (
         .clock(clock), .reset(reset),
         .Bus1_Sel(Bus1_Sel), .Bus2_Sel(Bus2_Sel),
-        .PC_Load(PC_Load), .PC_Inc(PC_Inc), .PR_Inc(PR_Incl,
+        .PC_Load(PC_Load), .PC_Inc(PC_Inc), .PR_Inc(PR_Incl),
         .A_Load(A_Load), .B_Load(B_Load), .C_Load(C_Load),
         .IR_Load(IR_Load), .MAR_Load(MAR_Load), .CCR_Load(CCR_Load), .Memory_Load(Memory_Load),
         .ALU_Result(ALU_Result), .from_memory(from_memory), .NZVC(Flags),
