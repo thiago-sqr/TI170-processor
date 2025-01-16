@@ -76,7 +76,8 @@ module caminho_dados (
     input wire [2:0] Bus1_Sel,
     input wire [1:0] Bus2_Sel,
     input wire PC_Load, PC_Inc, PR_Inc, A_Load, B_Load, C_Load, IR_Load, MAR_Load, CCR_Load, Memory_Load,
-    input wire [7:0] ALU_Result, from_memory, NZVC,
+    input wire [6:0]  NZVC,
+    input wire [7:0] ALU_Result, from_memory,
     output reg [7:0] to_memory, address,
     output reg [7:0] IR, A, B, C, PC, MAR, PR, CCR_Result
 );
@@ -190,19 +191,20 @@ module control_unit (
     input clock,               // Clock de entrada
     input reset,               // Reset ativo baixo
     input [7:0] IR,            // Registrador de Instrução
-    input CCR_Result,          // Resultado do registrador de condições (CCR)
+  input [7:0] CCR_Result,          // Resultado do registrador de condições (CCR)
     output reg IR_Load,        // Sinal para carregar o registrador de instrução
     output reg MAR_Load,       // Sinal para carregar o registrador de endereço de memória
     output reg MARR_Load,       // Sinal para carregar o registrador de endereço de memória da resposta
     output reg PC_Load,        // Sinal para carregar o registrador de contador de programa (PC)
     output reg PR_Load,        // Sinal para carregar o registrador de contador de resposta (PR)
-    output reg PC_Inc,         // Sinal para incrementar o PC
+    output reg PC_Inc, PR_Inc, // Sinal para incrementar o PC e o PR
     output reg Memory_Load,     // Sinal para carregar uma informação na memória de dados (RAM)
     output reg A_Load,         // Sinal para carregar o registrador A
     output reg B_Load,         // Sinal para carregar o registrador B
+    output reg C_Load,         // Sinal para carregar o registrador C
     output reg [3:0] ALU_Sel,  // Seleção da ALU
     output reg CCR_Load,       // Sinal para carregar o registrador de condições
-    output reg [1:0] Bus1_Sel, // Seleção para o barramento 1
+  output reg [2:0] Bus1_Sel, // Seleção para o barramento 1
     output reg [1:0] Bus2_Sel, // Seleção para o barramento 2
     output reg write,           // Sinal de escrita em memória ou registradores
     output reg file_finished   // Sinal para indicar que o arquivo foi terminado, iniciando a criação do arquivo de resposta
@@ -222,7 +224,7 @@ module control_unit (
     parameter S_LDB_DIR_4 = 17, S_LDB_DIR_5 = 18, S_LDB_DIR_6 = 19;        // Carregam um valor da memória para o Registrador B
     parameter S_STB_DIR_10 = 22, S_STB_DIR_11 = 23, S_STB_DIR_12 = 24;     // Guardam o valor do Registrador B na memória
 
-    parameter ALU_7 = 25, JMP = 26;                                        // Executam operações após coleta de instrução e operando(s)
+    parameter ALU_7 = 25, JMP_7 = 26;                                        // Executam operações após coleta de instrução e operando(s)
 
     parameter S_STIR_DIR_8 = 32, S_STIR_DIR_9 = 33;                        // Guardam o valor do Registrador IR na memória
     
@@ -248,7 +250,7 @@ module control_unit (
             S_FETCH_1: next_state <= S_FETCH_2;
             S_FETCH_2: next_state <= S_DECODE_3;
             S_DECODE_3: begin
-                if      (IR == 8'h00) next_stage <= END_OF_ALL;
+              if      (IR == 8'h00) next_state <= END_OF_ALL;
                 else if (IR == 8'h04) next_state <= S_LDB_DIR_4;
                 else                  next_state <= S_LDA_DIR_4;
             end
@@ -264,8 +266,8 @@ module control_unit (
 
             // Estados em que o Registrador B recebe um valor predefinido (sua única utilização atual
             // é de receber 8'h01, utilizado para incremento ou decremento do operando A)
-            S_LDB_IMM_4: next_stage <= S_LDB_IMM_5;
-            S_LDB_IMM_5: next_stage <= S_LDB_IMM_6;
+            S_LDB_IMM_4: next_state <= S_LDB_IMM_5;
+            S_LDB_IMM_5: next_state <= S_LDB_IMM_6;
             
             // Estados da coleta do segundo operando (ou do tamanho do salto) e interpretação (é um segundo operando ou o tamanho de um salto?)
             S_LDB_DIR_4: next_state <= S_LDB_DIR_5;
@@ -276,24 +278,24 @@ module control_unit (
             end
 
             // Estados que incorporam gravar a instrução que foi executada na memória de respostas;
-            ALU_7: next_stage <=  S_STIR_DIR_8;
+            ALU_7: next_state <=  S_STIR_DIR_8;
             
             // Estado de Jump: apenas pula a quantidade de instruções pedidas;
-            JMP_7: next_stage <= S_STIR_DIR_8;
+            JMP_7: next_state <= S_STIR_DIR_8;
             
-            S_STIR_DIR_8: next_stage <= S_STIR_DIR_9;
-            S_STIR_DIR_9: if(IR == 8'h04) next_stage <= S_STB_DIR_10;
-                          else            next_stage <= S_STC_DIR_10;
+            S_STIR_DIR_8: next_state <= S_STIR_DIR_9;
+          S_STIR_DIR_9: if(IR == 8'h04) next_state <= S_STB_DIR_10;
+                          else            next_state <= S_STC_DIR_10;
 
             // Estados que incorporam a saída C à memória de respostas; 
-            S_STB_DIR_10: next_stage <=  S_STB_DIR_11;
-            S_STB_DIR_11: next_stage <= S_STB_DIR_12;
-            S_STB_DIR_12: next_stage <= S_FETCH_0;
+            S_STB_DIR_10: next_state <=  S_STB_DIR_11;
+            S_STB_DIR_11: next_state <= S_STB_DIR_12;
+            S_STB_DIR_12: next_state <= S_FETCH_0;
             
             // Estados que incorporam a saída C à memória de respostas; 
-            S_STC_DIR_10: next_stage <=  S_STC_DIR_11;
-            S_STC_DIR_11: next_stage <= S_STC_DIR_12;
-            S_STC_DIR_12: next_stage <= S_FETCH_0;
+            S_STC_DIR_10: next_state <=  S_STC_DIR_11;
+            S_STC_DIR_11: next_state <= S_STC_DIR_12;
+            S_STC_DIR_12: next_state <= S_FETCH_0;
 
             default: next_state <= S_FETCH_0;
         endcase
@@ -421,7 +423,7 @@ module control_unit (
             
             S_STB_DIR_10: begin
                 B_Load = 1;
-                Bus1_Sel = 3'010;
+                Bus1_Sel = 3'b010;
                 Bus2_Sel = 2'b00;
             end
             S_STB_DIR_11: begin
@@ -766,8 +768,9 @@ module answer_writer(
     input wire reset,
     input wire [7:0] data_in[0:127],    // Dados de entrada para escrever no arquivo
     input wire write_enable,      // Sinal para habilitar a escrita
-    input reg  answer_size,       // indica a quantidade de linhas a serem escritas
-    output reg done             // Indica quando a escrita está concluída
+  input reg [7:0] answer_size,   // indica a quantidade de linhas a serem escritas
+    output reg done,             // Indica quando a escrita está concluída
+    output reg [7:0] PR
     
 );
     // Identificador do arquivo
@@ -791,7 +794,7 @@ module answer_writer(
             integer i;
             for(i = 0; i < PR; i = i + 1) begin
                 $fwrite(file_id, "%c", data_in[i]); // Escreve os dados no arquivo como binário
-                $display("Dado escrito: %0h", data_in); // Mensagem para depuração
+              $display("Dado escrito: %0h", data_in[i]); // Mensagem para depuração
             end
         end
     end
@@ -799,7 +802,7 @@ module answer_writer(
     // Finalização: fechar o arquivo
     final begin
         $fclose(file_id); // Garante que o arquivo seja fechado corretamente
-        done <= 1;        // Marca o processo como concluído
+        done = 1;        // Marca o processo como concluído
         $display("Arquivo 'answer.bin' salvo com sucesso.");
     end
 endmodule
@@ -812,7 +815,6 @@ endmodule
 
 module processador8bits(
   input wire clock, reset,               // Sincroniza os procedimentos e reseta os parâmetro, respectivamente 
-  output wire [7:0] ram_data_out,        // Dados de saída da RAM (para depuração ou uso futuro)
   input wire [7:0] from_memory,
   output wire [7:0] to_memory, address,
   output wire done                      // Indica quando o processo está concluído
@@ -831,7 +833,8 @@ module processador8bits(
   //
     wire [7:0] IR, A, B, C, PR, ALU_Result;
     wire [6:0] Flags;
-    wire [1:0] Bus1_Sel, Bus2_Sel, comparacao_resultado;
+    wire [2:0] Bus1_Sel; 
+    wire [1:0] Bus2_Sel, comparacao_resultado;
     wire [3:0] ALU_Sel;
     wire PC_Load, PC_Inc, PR_Inc, A_Load, B_Load, C_Load, IR_Load, MAR_Load, Memory_Load, CCR_Load, write;
     wire [7:0] CCR_Result;
@@ -843,7 +846,7 @@ module processador8bits(
     end
     
   // Instanciação do File Reader
-    File_Reader FR_inst (
+    file_reader FR_inst (
         .clock(clock),
         .reset(reset),
         .read(reading_phase),
@@ -886,7 +889,7 @@ module processador8bits(
     caminho_dados DatPat_inst (
         .clock(clock), .reset(reset),
         .Bus1_Sel(Bus1_Sel), .Bus2_Sel(Bus2_Sel),
-        .PC_Load(PC_Load), .PC_Inc(PC_Inc), .PR_Inc(PR_Incl),
+        .PC_Load(PC_Load), .PC_Inc(PC_Inc), .PR_Inc(PR_Inc),
         .A_Load(A_Load), .B_Load(B_Load), .C_Load(C_Load),
         .IR_Load(IR_Load), .MAR_Load(MAR_Load), .CCR_Load(CCR_Load), .Memory_Load(Memory_Load),
         .ALU_Result(ALU_Result), .from_memory(from_memory), .NZVC(Flags),
