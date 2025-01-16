@@ -5,9 +5,9 @@
 //===================================================================================================================================
 
 module file_reader(
-    input wire clock,
-    input wire reset,
+    input wire clock, reset, read,
     output reg [7:0] data_out,   // Dados lidos do arquivo
+    
 );
     // Memória simulando um arquivo externo
     reg [7:0] file_memory [0:127]; // Arquivo com 128 linhas
@@ -20,12 +20,14 @@ module file_reader(
     end
 
     always @(posedge clock or posedge reset) begin
-        if (reset) begin
-            line_counter <= 0;
-        end else if (line_counter < 128) begin
-            data_out <= file_memory[line_counter]; // Envia uma linha
-            line_counter <= line_counter + 1;      // Próxima linha
-        end 
+        if(read) begin
+            if (reset) begin
+                line_counter <= 0;
+            end else if (line_counter < 128) begin
+                data_out <= file_memory[line_counter]; // Envia uma linha
+                line_counter <= line_counter + 1;      // Próxima linha
+            end
+        end
     end
 endmodule
 
@@ -816,11 +818,11 @@ module processador8bits(
   output wire done                      // Indica quando o processo está concluído
 );
   // Conexões entre os módulos
-    reg reading_phase;        // Determina se está na fase de leitura do arquivo externo
-    wire [7:0] file_data_out; // Dados lidos do arquivo
-    reg [7:0] ram_address;    // Endereço da RAM
-    reg ram_write;            // Sinal de escrita na RAM
-    reg [7:0] ram_data_in;    // Dados a serem escritos na RAM
+    reg reading_phase, execution_phase, writing_phase; // Determina a fase em que o programa está funcionando
+    wire [7:0] file_data_out;                          // Dados lidos do arquivo
+    reg [7:0] ram_address;                             // Endereço da RAM
+    reg ram_write;                                     // Sinal de escrita na RAM
+    reg [7:0] ram_data_in;                             // Dados a serem escritos na RAM
     wire [7:0] ram_data_out;
     reg [7:0] ram_memory [0:127]; // Memória de dados da RAM
     // Controle do módulo Answer_Writer
@@ -834,10 +836,17 @@ module processador8bits(
     wire PC_Load, PC_Inc, A_Load, B_Load, C_Load, IR_Load, MAR_Load, CCR_Load, write;
     wire [7:0] CCR_Result;
 
+    initial begin
+        reading_phase =   1;
+        execution_phase = 0;
+        writing_phase =   0; 
+    end
+    
   // Instanciação do File Reader
     File_Reader FR_inst (
         .clock(clock),
         .reset(reset),
+        .read(reading_phase),
         .data_out(file_data_out) // Dados lidos do arquivo
     );
 
@@ -850,7 +859,7 @@ module processador8bits(
         .write(ram_write),       // Sinal de escrita na RAM
         .data_out(ram_data_out)  // Dados de saída da RAM
     );
-
+    
    // Controlador para enviar os dados do File Reader para a RAM
     reg [7:0] line_counter; // Contador de linhas do arquivo
     always @(posedge clock or posedge reset) begin
@@ -868,6 +877,63 @@ module processador8bits(
             end else begin
                 ram_write <= 0; // Desabilita escrita quando o arquivo termina
                 reading_phase = 0;
+                execution_phase = 1;
+            end
+        end
+    end
+
+    // Instância do caminho de dados
+    caminho_dados DatPat_inst (
+        .clock(clock), .reset(reset),
+        .Bus1_Sel(Bus1_Sel), .Bus2_Sel(Bus2_Sel),
+        .PC_Load(PC_Load), .PC_Inc(PC_Inc),
+        .A_Load(A_Load), .B_Load(B_Load), .C_Load(C_Load),
+        .IR_Load(IR_Load), .MAR_Load(MAR_Load), .CCR_Load(CCR_Load),
+        .ALU_Result(ALU_Result), .from_memory(from_memory), .NZVC(Flags),
+        .to_memory(to_memory), .address(address),
+        .IR(IR), .A(A), .B(B), .C(C), .PC(), .MAR(), .CCR_Result(CCR_Result)
+    );
+
+    // Instância da unidade de controle
+    control_unit CU_inst (
+        .clock(clock), .reset(reset),
+        .IR(IR), .CCR_Result(CCR_Result),
+        .IR_Load(IR_Load), .MAR_Load(MAR_Load),
+        .PC_Load(PC_Load), .PC_Inc(PC_Inc),
+        .A_Load(A_Load), .B_Load(B_Load),
+        .ALU_Sel(ALU_Sel), .CCR_Load(CCR_Load),
+        .Bus1_Sel(Bus1_Sel), .Bus2_Sel(Bus2_Sel),
+        .write(write)
+    );
+
+    // Instância da ALU
+    ALU ALU_inst (
+        .A(A), .B(B),
+        .ALU_Sel(ALU_Sel),
+        .C(ALU_Result),
+        .Flags(Flags),
+        .comparacao_resultado(comparacao_resultado),
+        .ALU_Cout()
+    );
+
+    // Instância do módulo Answer_Writer
+    answer_writer AW_inst (
+        .clock(clock),
+        .reset(reset),
+        .data_in(data_buffer),
+        .write_enable(write_enable),
+        .answer_size(PR),
+        .done(done)
+    );
+
+    // Buffer de dados para o módulo Answer_Writer
+    always @(posedge clock or posedge reset) begin
+        if (writing_phase) begin
+            integer i;
+            for (i = 0; i < PR; i = i + 1) begin
+                ram_address <= i;
+                #5;
+                data_buffer[i] <= ram_data_out;
             end
         end
     end
