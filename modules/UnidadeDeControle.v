@@ -17,6 +17,7 @@ module control_unit (
     output reg [1:0] Bus1_Sel, // Seleção para o barramento 1
     output reg [1:0] Bus2_Sel, // Seleção para o barramento 2
     output reg write           // Sinal de escrita em memória ou registradores
+    output reg file_finished   // Sinal para indicar que o arquivo foi terminado, iniciando a criação do arquivo de resposta
 );
 
     // Definição dos estados
@@ -31,13 +32,15 @@ module control_unit (
     
     parameter S_LDB_IMM_4 = 14, S_LDB_IMM_5 = 15, S_LDB_IMM_6 = 16;        // Carregam um valor determinado para o Registrador B
     parameter S_LDB_DIR_4 = 17, S_LDB_DIR_5 = 18, S_LDB_DIR_6 = 19;        // Carregam um valor da memória para o Registrador B
-    parameter S_STB_DIR_4 = 22, S_STB_DIR_5 = 23;                          // Guardam o valor do Registrador B na memória
+    parameter S_STB_DIR_10 = 22, S_STB_DIR_11 = 23, S_STB_DIR_12 = 24;     // Guardam o valor do Registrador B na memória
 
-    parameter ALU_7 = 24, JMP = 25;                                        // Executam operações após coleta de instrução e operando(s)
+    parameter ALU_7 = 25, JMP = 26;                                        // Executam operações após coleta de instrução e operando(s)
 
-    parameter S_STIR_DIR_8 = 32, S_STIR_DIR_9 = 33;    // Guardam o valor do Registrador IR na memória
+    parameter S_STIR_DIR_8 = 32, S_STIR_DIR_9 = 33;                        // Guardam o valor do Registrador IR na memória
     
     parameter S_STC_DIR_10 = 42, S_STC_DIR_11 = 43, S_STC_DIR_12= 44;      // Guardam o valor do Registrador C na memória 
+
+    parameter END_OF_ALL = 100;                                            // Estado que termina a coleta e análise de instruções e ativa o processamento das respostas;
 
     // Outros estados podem ser definidos conforme a necessidade...
 
@@ -57,8 +60,9 @@ module control_unit (
             S_FETCH_1: next_state <= S_FETCH_2;
             S_FETCH_2: next_state <= S_DECODE_3;
             S_DECODE_3: begin
-                if (IR == 8'h04) next_state <= S_LDB_DIR_4;
-                else next_state <= S_LDA_DIR_4;
+                if      (IR == 8'h00) next_stage <= END_OF_ALL;
+                else if (IR == 8'h04) next_state <= S_LDB_DIR_4;
+                else                  next_state <= S_LDA_DIR_4;
             end
 
             // Estados de coleta do primeiro operando e interpretação (é preciso outro operando ou não?)
@@ -85,17 +89,24 @@ module control_unit (
 
             // Estados que incorporam gravar a instrução que foi executada na memória de respostas;
             ALU_7: next_stage <=  S_STIR_DIR_8;
+            
+            // Estado de Jump: apenas pula a quantidade de instruções pedidas;
+            JMP_7: next_stage <= S_STIR_DIR_8;
+            
             S_STIR_DIR_8: next_stage <= S_STIR_DIR_9;
-            S_STIR_DIR_9: next_stage <= S_STC_DIR_10;
+            S_STIR_DIR_9: if(IR == 8'h04) next_stage <= S_STB_DIR_10;
+                          else            next_stage <= S_STC_DIR_10;
+
+            // Estados que incorporam a saída C à memória de respostas; 
+            S_STB_DIR_10: next_stage <=  S_STB_DIR_11;
+            S_STB_DIR_11: next_stage <= S_STB_DIR_12;
+            S_STB_DIR_12: next_stage <= S_FETCH_0;
             
             // Estados que incorporam a saída C à memória de respostas; 
             S_STC_DIR_10: next_stage <=  S_STC_DIR_11;
             S_STC_DIR_11: next_stage <= S_STC_DIR_12;
             S_STC_DIR_12: next_stage <= S_FETCH_0;
 
-            // Estado de Jump; apenas pula a quantidade de instruções pedidas;
-            JMP_7: next_stage <= S_ FETCH_0;
-            
             default: next_state <= S_FETCH_0;
         endcase
     end
@@ -138,7 +149,6 @@ module control_unit (
             end
             S_LDA_DIR_6: begin
                 A_Load = 1;  // Carregar 
-                write = 1;  // Habilitar escrita
                 Bus2_Sel = 2'b10;
             end
             
@@ -149,7 +159,6 @@ module control_unit (
             S_LDB_DIR_5: begin
                 PC_Inc = 1;
                 B_Load = 1;  // Carregar 
-                write = 1;  // Habilitar escrita
                 Bus2_Sel = 2'b10;
             end
             S_LDB_DIR_6: begin
@@ -201,6 +210,7 @@ module control_unit (
             end
             S_STIR_DIR_9: begin
                 Memory_Load = 1;
+                write = 1;
                 Bus1_Sel = 3'b101;
                 PR_Inc = 1;
             end
@@ -216,10 +226,31 @@ module control_unit (
             end
             S_STC_DIR_12 begin
                 Memory_Load = 1;
+                write = 1;
                 Bus1_Sel = 3'b011;
                 PR_Inc = 1;
             end
             
+            S_STB_DIR_10: begin
+                B_Load = 1;
+                Bus1_Sel = 3'010;
+                Bus2_Sel = 2'b00;
+            end
+            S_STB_DIR_11 begin
+                MAR_Load = 1;
+                Bus1_Sel = 3'b100;
+                Bus2_Sel = 2'b00;
+            end
+            S_STB_DIR_12 begin
+                Memory_Load = 1;
+                write = 1;
+                Bus1_Sel = 3'b010;
+                PR_Inc = 1;
+            end
+
+            END_OF_ALL begin
+                file_finished = 1;
+            end
             // Outros estados conforme a lógica necessária
             default: begin
                 // Caso de fallback
