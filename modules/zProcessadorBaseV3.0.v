@@ -20,15 +20,13 @@ module file_reader(
     end
 
     always @(posedge clock or posedge reset) begin
-        if(read) begin
             if (reset) begin
                 line_counter <= 0;
-            end else if (line_counter < 128) begin
+            end else if (read && line_counter < 128) begin
                 data_out <= file_memory[line_counter]; // Envia uma linha
                 line_counter <= line_counter + 1;      // Próxima linha
             end
-        end
-    end
+  	end
 endmodule
 
 //===================================================================================================================================
