@@ -1,69 +1,51 @@
-`timescale 1ns / 1ps
+`timescale 1ns/1ps
 
-module testbench;
-    // Declarações de sinais
+module tb_file_reader;
+
+    // Parâmetros e sinais
     reg clock;
     reg reset;
-    reg write;
-    reg [7:0] address;
-    reg [7:0] data_in;
-    wire [7:0] data_out_file_reader;
-    wire [7:0] data_out_ram;
+    reg read;                   // Sinal de controle para leitura
+    wire [7:0] data_out;        // Dados lidos do arquivo
 
-    // Instanciação do módulo file_reader
-    file_reader uut_file_reader (
+    integer i;
+
+    // Instância do módulo file_reader
+    file_reader reader (
         .clock(clock),
         .reset(reset),
-        .data_out(data_out_file_reader)
+        .read(read),
+        .data_out(data_out)
     );
 
-    // Instanciação do módulo data_memory
-    data_memory uut_data_memory (
-        .clock(clock),
-        .reset(reset),
-        .address(address),
-        .data_in(data_in),
-        .write(write),
-        .data_out(data_out_ram)
-    );
-
-    // Clock gerador
+    // Clock generator
     initial begin
         clock = 0;
-        forever #5 clock = ~clock; // Clock de 10ns
+        forever #5 clock = ~clock; // Período de 10 unidades de tempo
     end
 
-    // Testbench
-    integer i;
+    // Inicialização e teste
     initial begin
-        // Inicializa sinais
+        // Inicialização
+        $display("Início do Testbench");
         reset = 1;
-        write = 0;
-        address = 0;
-        data_in = 0;
+        read = 0;
+        #10;
+        reset = 0;
 
-        // Reseta os módulos
-        #10 reset = 0;
-        #10 reset = 1;
+        // Começar a leitura após o reset
+        #10;
+        read = 1;  // Ativa o sinal de leitura
 
-        // Escreve os dados do file_reader na memória RAM
+        // Aguardar o processamento da leitura e printar as linhas lidas
         for (i = 0; i < 128; i = i + 1) begin
-            address = i;
-            data_in = data_out_file_reader;
-            write = 1;
-            #10; // Aguarda para sincronizar com o clock
-        end
-        
-        write = 0; // Desabilita escrita
-
-        // Lê os dados da RAM e exibe no console
-        for (i = 0; i < 128; i = i + 1) begin
-            address = i;
-            #10; // Aguarda para sincronizar com o clock
-            $display("RAM[%0d] = %0d", i, uut_data_memory.RW[i]);
+            #10;  // Aguarda 10 unidades de tempo para ler o próximo valor
+            $display("Linha %d: %b", i, data_out); // Exibe a linha lida
         end
 
-        $finish; // Finaliza a simulação
+        // Finalizar o testbench
+        $display("Testbench concluído com sucesso!");
+        $stop;
     end
 
 endmodule
