@@ -1,4 +1,4 @@
-module output_ports (
+module answer_writer (
     input clock,                // Sinal de clock
     input reset,                // Sinal de reset ativo baixo
     input [7:0] address,        // Endereço de memória
