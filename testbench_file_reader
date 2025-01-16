@@ -1,0 +1,69 @@
+`timescale 1ns / 1ps
+
+module testbench;
+    // Declarações de sinais
+    reg clock;
+    reg reset;
+    reg write;
+    reg [7:0] address;
+    reg [7:0] data_in;
+    wire [7:0] data_out_file_reader;
+    wire [7:0] data_out_ram;
+
+    // Instanciação do módulo file_reader
+    file_reader uut_file_reader (
+        .clock(clock),
+        .reset(reset),
+        .data_out(data_out_file_reader)
+    );
+
+    // Instanciação do módulo data_memory
+    data_memory uut_data_memory (
+        .clock(clock),
+        .reset(reset),
+        .address(address),
+        .data_in(data_in),
+        .write(write),
+        .data_out(data_out_ram)
+    );
+
+    // Clock gerador
+    initial begin
+        clock = 0;
+        forever #5 clock = ~clock; // Clock de 10ns
+    end
+
+    // Testbench
+    integer i;
+    initial begin
+        // Inicializa sinais
+        reset = 1;
+        write = 0;
+        address = 0;
+        data_in = 0;
+
+        // Reseta os módulos
+        #10 reset = 0;
+        #10 reset = 1;
+
+        // Escreve os dados do file_reader na memória RAM
+        for (i = 0; i < 128; i = i + 1) begin
+            address = i;
+            data_in = data_out_file_reader;
+            write = 1;
+            #10; // Aguarda para sincronizar com o clock
+        end
+        
+        write = 0; // Desabilita escrita
+
+        // Lê os dados da RAM e exibe no console
+        for (i = 0; i < 128; i = i + 1) begin
+            address = i;
+            #10; // Aguarda para sincronizar com o clock
+            $display("RAM[%0d] = %0d", i, uut_data_memory.RW[i]);
+        end
+
+        $finish; // Finaliza a simulação
+    end
+
+endmodule
