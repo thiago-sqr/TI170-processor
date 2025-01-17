@@ -210,7 +210,7 @@ module control_unit (
   output reg [2:0] Bus1_Sel, // Seleção para o barramento 1
     output reg [1:0] Bus2_Sel, // Seleção para o barramento 2
     output reg write           // Sinal de escrita em memória ou registradores
-    output wire file_finished   // Determina que o arquivo foi terminado
+    output reg file_finished   // Determina que o arquivo foi terminado
 );
 
     // Definição dos estados
@@ -759,7 +759,7 @@ module processador8bits(
   output wire done                      // Indica quando o processo está concluído
 );
   // Conexões entre os módulos
-    reg reading_phase, execution_phase, ending; // Determina a fase em que o programa está funcionando
+    reg reading_phase, execution_phase; wire ending;   // Determina a fase em que o programa está funcionando
     wire [7:0] file_data_out;                          // Dados lidos do arquivo
     reg [7:0] ram_address;                             // Endereço da RAM
     reg ram_write;                                     // Sinal de escrita na RAM
