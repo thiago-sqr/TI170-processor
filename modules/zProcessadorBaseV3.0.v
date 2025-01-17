@@ -20,7 +20,7 @@ module file_reader(
     end
 
     always @(posedge clock or posedge reset) begin
-            if (reset) begin
+        if (!reset) begin
                 line_counter <= 0;
             end else if (read && line_counter < 128) begin
                 data_out <= file_memory[line_counter]; // Envia uma linha
@@ -810,7 +810,7 @@ module processador8bits(
    // Controlador para enviar os dados do File Reader para a RAM
     reg [7:0] line_counter; // Contador de linhas do arquivo
     always @(posedge clock or posedge reset) begin
-        if (reset) begin
+        if (!reset) begin
             line_counter <= 0;
             ram_address <= 0;
             ram_write <= 0;
