@@ -210,6 +210,7 @@ module control_unit (
   output reg [2:0] Bus1_Sel, // Seleção para o barramento 1
     output reg [1:0] Bus2_Sel, // Seleção para o barramento 2
     output reg write           // Sinal de escrita em memória ou registradores
+    output reg file_finished   // Determina que o arquivo foi terminado
 );
 
     // Definição dos estados
@@ -425,7 +426,7 @@ module control_unit (
             end
 
             END_OF_ALL: begin
-                execute = 0;
+                file_finished = 1;
             end
             // Outros estados conforme a lógica necessária
             default: begin
@@ -758,7 +759,7 @@ module processador8bits(
   output wire done                      // Indica quando o processo está concluído
 );
   // Conexões entre os módulos
-    reg reading_phase, execution_phase; // Determina a fase em que o programa está funcionando
+    reg reading_phase, execution_phase, ending; // Determina a fase em que o programa está funcionando
     wire [7:0] file_data_out;                          // Dados lidos do arquivo
     reg [7:0] ram_address;                             // Endereço da RAM
     reg ram_write;                                     // Sinal de escrita na RAM
@@ -780,6 +781,11 @@ module processador8bits(
     initial begin
         reading_phase =   1;
         execution_phase = 0;
+        ending = 0;
+    end
+    
+    always @(*) begin
+        if(ending) execution_phase = 0;
     end
     
   // Instanciação do File Reader
@@ -843,7 +849,7 @@ module processador8bits(
         .A_Load(A_Load), .B_Load(B_Load),
         .ALU_Sel(ALU_Sel), .CCR_Load(CCR_Load),
         .Bus1_Sel(Bus1_Sel), .Bus2_Sel(Bus2_Sel),
-        .write(write)
+        .write(write), .file_finished(ending)
     );
 
     // Instância da ALU
