@@ -209,7 +209,7 @@ module control_unit (
     output reg CCR_Load,       // Sinal para carregar o registrador de condições
   output reg [2:0] Bus1_Sel, // Seleção para o barramento 1
     output reg [1:0] Bus2_Sel, // Seleção para o barramento 2
-    output reg write           // Sinal de escrita em memória ou registradores
+    output reg write,           // Sinal de escrita em memória ou registradores
     output reg file_finished   // Determina que o arquivo foi terminado
 );
 
