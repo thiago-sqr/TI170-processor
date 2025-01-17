@@ -738,7 +738,7 @@ module processador8bits(
   output wire done                      // Indica quando o processo está concluído
 );
   // Conexões entre os módulos
-    reg reading_phase, execution_phase, ending;         // Determina a fase em que o programa está funcionando
+    reg execution_phase, ending;         // Determina a fase em que o programa está funcionando
     wire ending_wire;
     wire [7:0] file_data_out;                          // Dados lidos do arquivo
     reg [7:0] ram_address;                             // Endereço da RAM
@@ -759,7 +759,6 @@ module processador8bits(
     wire [7:0] CCR_Result;
 
   	initial begin
-        reading_phase =   1;
         execution_phase = 1;
         ending = 0;
     end
