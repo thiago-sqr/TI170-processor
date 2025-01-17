@@ -45,7 +45,7 @@ endmodule
 //===================================================================================================================================
 
 module caminho_dados (
-    input wire execute,
+    input wire reset, execute,
     input wire [2:0] Bus1_Sel,
     input wire [1:0] Bus2_Sel,
     input wire PC_Load, PC_Inc, PR_Inc, A_Load, B_Load, C_Load, IR_Load, MAR_Load, CCR_Load, Memory_Load,
@@ -778,7 +778,7 @@ module processador8bits(
 
     // Instância do caminho de dados
     caminho_dados DatPat_inst (
-        .execute(execution_phase),
+        .reset(reset), .execute(execution_phase),
         .Bus1_Sel(Bus1_Sel), .Bus2_Sel(Bus2_Sel),
         .PC_Load(PC_Load), .PC_Inc(PC_Inc), .PR_Inc(PR_Inc),
         .A_Load(A_Load), .B_Load(B_Load), .C_Load(C_Load),
