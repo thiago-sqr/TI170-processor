@@ -94,7 +94,7 @@ module caminho_dados (
     always @(posedge IR_Load or negedge reset) begin
       if (!reset)
             IR = 8'h00;
-      else if (IR_Load) begin
+        else if (IR_Load) begin
             IR = Bus2;
           if(IR != 8'h04) $display("Resposta da operação: ");
           else $display("Houve um salto de ");
@@ -300,40 +300,60 @@ module control_unit (
         case (current_state)
             S_FETCH_0: begin
                 MAR_Load = 1;  // Carregar endereço do opcode
+                #2
+                Mar_Load = 0;
             end
             S_FETCH_1: begin
                 PC_Inc = 1;  // Incrementar PC
+                #2
+                PC_Inc = 0;
             end
             S_FETCH_2: begin
-                IR_Load = 1;  // Carregar a instrução
                 Bus2_Sel = 2'b10; // "10" -> from memory
+                IR_Load = 1;  // Carregar a instrução
+                #2
+                IR_Load = 0;
             end
             
             S_LDA_DIR_4: begin
                 MAR_Load = 1;
+                #2
+                Mar_Load = 0;
             end
             S_LDA_DIR_5: begin
                 PC_Inc = 1;
+                #2
+                PC_Inc = 0;
             end
             S_LDA_DIR_6: begin
-                A_Load = 1;  // Carregar 
                 Bus2_Sel = 2'b10;
+                A_Load = 1;  // Carregar
+                #2
+                A_Load = 0;
             end
             
             S_LDB_DIR_4: begin
                 MAR_Load = 1;
+                #2
+                Mar_Load = 0;
             end
             S_LDB_DIR_5: begin
                 PC_Inc = 1;
+                #2
+                PC_Inc = 0;
             end
             S_LDB_DIR_6: begin
-                B_Load = 1;  // Carregar 
                 Bus2_Sel = 2'b10;
+                B_Load = 1;  // Carregar
+                #2
+                B_Load = 0;
             end
 
             S_LDB_IMM_4: begin
-                B_Load = 1;       // Ativa o carregamento do registrador B
                 Bus2_Sel = 2'b01; // Seleciona o valor imediato para o barramento 2
+                B_Load = 1;       // Ativa o carregamento do registrador B
+                #2
+                B_Load = 0; 
             end
 
             ALU_7: begin
@@ -358,14 +378,18 @@ module control_unit (
             end
 
             JMP_7: begin
-                PC_Load = 1;
                 Bus1_Sel = 3'b010;
                 Bus2_Sel = 2'b00;
+                PC_Load = 1;
+                #2
+                PC_Load = 0;
             end
 
             S_STIR_DIR_8: begin
-                MAR_Load = 1;
                 Bus1_Sel = 3'b100;
+                MAR_Load = 1;
+                #2;
+                MAR_Load = 1;
             end
             S_STIR_DIR_9: begin
                 Memory_Load = 1;
@@ -375,12 +399,16 @@ module control_unit (
             end
 
             S_STC_DIR_10: begin
-                C_Load = 1;
                 Bus2_Sel = 2'b11;
+                C_Load = 1;
+                #2
+                C_Load = 0;
             end
             S_STC_DIR_11: begin
-                MAR_Load = 1;
                 Bus1_Sel = 3'b100;
+                MAR_Load = 1;
+                #2
+                MAR_Load = 0;
             end
             S_STC_DIR_12: begin
                 Memory_Load = 1;
@@ -390,8 +418,10 @@ module control_unit (
             end
             
             S_STB_DIR_10: begin
-                B_Load = 1;
                 Bus1_Sel = 3'b010;
+                B_Load = 1;
+                #2
+                B_Load = 1;
             end
             S_STB_DIR_11: begin
                 MAR_Load = 1;
