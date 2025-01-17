@@ -1,36 +1,7 @@
 `timescale 1ns / 1ps
 
 //===================================================================================================================================
-// MÓDULO 1: LEITOR DE ARQUIVO EXTERNO GERADO PELO COMPILADOR
-//===================================================================================================================================
-
-module file_reader(
-    input wire clock, reset, read,
-    output reg [7:0] data_out   // Dados lidos do arquivo
-    
-);
-    // Memória simulando um arquivo externo
-    reg [7:0] file_memory [0:127]; // Arquivo com 128 linhas
-    reg [6:0] line_counter;       // Contador de linhas do arquivo
-
-    // Inicializando o arquivo com dados binários
-    initial begin
-        $readmemb("file.bin", file_memory); // Lê o arquivo binário
-        line_counter = 0;
-    end
-
-    always @(posedge clock or posedge reset) begin
-        if (!reset) begin
-                line_counter <= 0;
-            end else if (read && line_counter < 128) begin
-                data_out <= file_memory[line_counter]; // Envia uma linha
-                line_counter <= line_counter + 1;      // Próxima linha
-            end
-  	end
-endmodule
-
-//===================================================================================================================================
-// MÓDULO 2: MEMÓRIA DE DADOS, O PRINCIPAL REGISTRADOR DO PROCESSADOR
+// MÓDULO 1: MEMÓRIA DE DADOS, O PRINCIPAL REGISTRADOR DO PROCESSADOR
 //===================================================================================================================================
 
 module data_memory(
@@ -70,11 +41,11 @@ module data_memory(
 endmodule
 
 //===================================================================================================================================
-// MÓDULO 3: CAMINHO DE DADOS, O MÓDULO QUE DESEHA O TRAJETO QUE OS DADOS FARÃO AO LONGO DA EXECUÇÃO DE SUAS INSTRUÇÕES
+// MÓDULO 2: CAMINHO DE DADOS, O MÓDULO QUE DESEHA O TRAJETO QUE OS DADOS FARÃO AO LONGO DA EXECUÇÃO DE SUAS INSTRUÇÕES
 //===================================================================================================================================
 
 module caminho_dados (
-    input wire clock, reset, execute,
+    input wire execute,
     input wire [2:0] Bus1_Sel,
     input wire [1:0] Bus2_Sel,
     input wire PC_Load, PC_Inc, PR_Inc, A_Load, B_Load, C_Load, IR_Load, MAR_Load, CCR_Load, Memory_Load,
@@ -112,7 +83,7 @@ module caminho_dados (
     end
 
     // Conexão de memória
-    always @(posedge clock or negedge reset) begin
+    always @(*) begin
         if(execute && Memory_Load) begin
             to_memory = Bus1;
             address = MAR;
@@ -120,79 +91,80 @@ module caminho_dados (
     end
 
     // Registrador de Instrução (IR)
-    always @(posedge clock or negedge reset) begin
+    always @(posedge IR_Load or negedge reset) begin
       if (!reset)
-            IR <= 8'h00;
+            IR = 8'h00;
       else if (IR_Load) begin
-            IR <= Bus2;
-        if(IR != 8'h04) $display("Resposta da operação: %b", Bus2);
+            IR = Bus2;
+          if(IR != 8'h04) $display("Resposta da operação: ");
+          else $display("Houve um salto de ");
           end
     end
 
     // Registrador de Endereço de Memória (MAR)
-    always @(posedge clock or negedge reset) begin
+    always @(posedge MAR_Load or negedge reset) begin
         if (!reset)
-            MAR <= 8'h00;
+            MAR = 8'h00;
         else if (execute && MAR_Load)
-            MAR <= Bus2;
+            MAR = Bus2;
     end
 
     // Contador de Programa (PC) com Incremento
-    always @(posedge clock or negedge reset) begin
+    always @(posedge PC_Inc or negedge reset) begin
         if (!reset)
-            PC <= 8'h00;
+            PC = 8'h00;
         else if (execute && PC_Load)
-            PC <= PC + Bus2;
+            PC = PC + Bus2;
         else if (execute && PC_Inc)
-            PC <= PC + 1;
+            PC = PC + 1;
     end
 
     // Incremento de Contador de Resposta (PR)
-    always @(posedge clock or negedge reset) begin
+    always @(posedge PR_Inc or negedge reset) begin
         if (!reset)
-            PR <= 8'h00;
+            PR = 8'h00;
         else if (execute && PR_Inc)
-            PR <= PR + 1;
+            PR = PR + 1;
     end
     
     // Registradores A, B e C
-    always @(posedge clock or negedge reset) begin
+    always @(posedge A_Load or negedge reset) begin
         if (!reset)
-            A <= 8'h00;
+            A = 8'h00;
         else if (execute && A_Load)
-            A <= Bus2;
+            A = Bus2;
     end
 
-    always @(posedge clock or negedge reset) begin
+    always @(posedge B_Load or negedge reset) begin
         if (!reset)
-            B <= 8'h00;
+            B = 8'h00;
       else if (execute && B_Load) begin
-            B <= Bus2;
+            B = Bus2;
         if(IR == 8'h04) $display("%h", Bus2);
       end
     end
 
-    always @(posedge clock or negedge reset) begin
+    always @(posedge C_Load or negedge reset) begin
         if(!reset)
-            C <= 8'h00;
+            C = 8'h00;
       else if (execute && C_Load) begin
-            C <= Bus2;
+            C = Bus2;
         $display("%h", Bus2);
       end
     end
 
     // Registrador de Códigos de Condição (CCR)
-    always @(posedge clock or negedge reset) begin
+    always @(posedge CCR_Load or negedge reset) begin
         if (!reset)
-            CCR_Result <= 8'h00;
+            CCR_Result = 8'h00;
         else if (execute && CCR_Load)
-            CCR_Result <= NZVC;
+            CCR_Result = NZVC;
     end
 
 endmodule
 
 //===================================================================================================================================
-// MÓDULO 4: UNIDADE DE CONTROLE, RESPONSÁVEL POR DECIDIR COMO OS DADOS SERÃO CARREGADOS E UTILIZADOS ENTRE AS PRINCIPAIS UNIDADES
+// MÓDULO 3: UNIDADE DE CONTROLE, RESPONSÁVEL POR DECIDIR COMO OS DADOS SERÃO CARREGADOS E UTILIZADOS ENTRE AS PRINCIPAIS UNIDADES
 //===================================================================================================================================
 
 module control_unit (
@@ -445,7 +417,7 @@ module control_unit (
 endmodule
 
 //===================================================================================================================================
-// MÓDULO 5: UNIDADE LÓGICA E ARITMÉTICA E TODAS SUAS SUB-UNIDADES, RESPONSÁVEL POR CÁLCULOS E OPERAÇÕES LÓGICAS
+// MÓDULO 4: UNIDADE LÓGICA E ARITMÉTICA E TODAS SUAS SUB-UNIDADES, RESPONSÁVEL POR CÁLCULOS E OPERAÇÕES LÓGICAS
 //===================================================================================================================================
 
 module somador_completo (A, B, Cin, S, Cout);
@@ -786,29 +758,15 @@ module processador8bits(
     wire PC_Load, PC_Inc, PR_Inc, A_Load, B_Load, C_Load, IR_Load, MAR_Load, Memory_Load, CCR_Load, write;
     wire [7:0] CCR_Result;
 
-   // Controlador para enviar os dados do File Reader para a RAM
-    reg [7:0] line_counter; // Contador de linhas do arquivo
-    
   	initial begin
         reading_phase =   1;
         execution_phase = 1;
         ending = 0;
-        line_counter = 8'h00;
     end
-    
     always @(*) begin
         ending = ending_wire;
         if(ending) execution_phase = 0;
     end
-    
-  // Instanciação do File Reader
-    file_reader FR_inst (
-        .clock(clock),
-        .reset(reset),
-        .read(reading_phase),
-        .data_out(file_data_out) // Dados lidos do arquivo
-    );
-
   // Instanciação da Memória RAM
     data_memory RAM_inst (
         .clock(clock),
@@ -818,29 +776,10 @@ module processador8bits(
         .write(ram_write),       // Sinal de escrita na RAM
         .data_out(ram_data_out)  // Dados de saída da RAM
     );
-    
-  always @(posedge clock or negedge reset) begin
- 
-    if (!reset) begin
-            line_counter <= 0;
-            ram_address <= 0;
-            ram_write <= 0;
-            reading_phase = 1;
-        end else if(reading_phase) begin
-          if (line_counter < 128) begin
-                ram_address <= line_counter; // Endereço correspondente na RAM
-                line_counter <= line_counter + 1; // Avança para a próxima linha
-            end else begin
-                ram_write <= 0; // Desabilita escrita quando o arquivo termina
-                reading_phase = 0;
-                execution_phase = 1;
-            end
-        end
-    end
 
     // Instância do caminho de dados
     caminho_dados DatPat_inst (
-        .clock(clock), .reset(reset), .execute(execution_phase),
+        .execute(execution_phase),
         .Bus1_Sel(Bus1_Sel), .Bus2_Sel(Bus2_Sel),
         .PC_Load(PC_Load), .PC_Inc(PC_Inc), .PR_Inc(PR_Inc),
         .A_Load(A_Load), .B_Load(B_Load), .C_Load(C_Load),
