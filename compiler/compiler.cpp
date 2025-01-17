@@ -5,6 +5,7 @@
 #include <map>
 
 #define WORD_SIZE 8
+#define MIN_LINE 128
 
 using namespace std;
 
@@ -87,18 +88,18 @@ int main(int argc, char** argv) {
     }
 
     string cmdBuffer, argBuffer;
-    int line = 0;
+    int asmLineCounter = 0, writtenLineCounter = 0;
 
     // Loop principal: procura comandos que são representados por mnemonicos válidos
     while (getline(asm_file, cmdBuffer)) {
         
-        line++;
+        asmLineCounter++;
         removeComments(cmdBuffer); removeSpaces(cmdBuffer);
 
         if (cmdBuffer.empty()) continue;
 
         if (!isCommand(cmdBuffer)) {
-            cerr << "Semantic Error in line " << line << ": Command " << cmdBuffer << " is undefined" << endl;
+            cerr << "Semantic Error in line " << asmLineCounter << ": Command " << cmdBuffer << " is undefined" << endl;
             asm_file.close(); bin_file.close();
             return 3;
         }
@@ -108,11 +109,12 @@ int main(int argc, char** argv) {
 
         bin_file.write(opcode.c_str(), opcode.size());
         bin_file.put('\n');
+        writtenLineCounter++;
 
         // Loop interno: analisa argumentos (linhas seguintes) para os comandos
         for (int i = 0; i < expectedArgs; i++) {
             
-            line++;
+            asmLineCounter++;
 
             if (!getline(asm_file, argBuffer)) {
                 cerr << "EOF reached before expected arguments" << endl;
@@ -127,7 +129,7 @@ int main(int argc, char** argv) {
             }
 
             if (!isBinary(argBuffer) || argBuffer.size() > WORD_SIZE) {
-                cerr << "Syntactic Error in line " << line << ": Invalid argument " << argBuffer << " for command " << cmdBuffer << endl;
+                cerr << "Syntactic Error in line " << asmLineCounter << ": Invalid argument " << argBuffer << " for command " << cmdBuffer << endl;
                 cerr << "Expected binary argument of size " << WORD_SIZE << endl;
                 asm_file.close(); bin_file.close();
                 return 5;
@@ -136,7 +138,14 @@ int main(int argc, char** argv) {
             argBuffer = completeArgument(argBuffer);
             bin_file.write(argBuffer.c_str(), argBuffer.size());
             bin_file.put('\n');
+            writtenLineCounter++;
         }
+    }
+
+    // Laço para completar o arquivo com o número mínimo de linhas
+    for (int i = 0; i < MIN_LINE - writtenLineCounter; i++) {
+        bin_file.write(completeArgument("0").c_str(), argBuffer.size());
+        bin_file.put('\n');
     }
 
     asm_file.close(); bin_file.close();
