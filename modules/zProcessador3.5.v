@@ -126,7 +126,6 @@ module caminho_dados (
       else if (IR_Load) begin
             IR <= Bus2;
         if(IR != 8'h04) $display("Resposta da operação: %b", Bus2);
-        else $display("Houve um salto de: %b", Bus2);
           end
     end
 
@@ -846,8 +845,8 @@ module processador8bits(
         .PC_Load(PC_Load), .PC_Inc(PC_Inc), .PR_Inc(PR_Inc),
         .A_Load(A_Load), .B_Load(B_Load), .C_Load(C_Load),
         .IR_Load(IR_Load), .MAR_Load(MAR_Load), .CCR_Load(CCR_Load), .Memory_Load(Memory_Load),
-        .ALU_Result(ALU_Result), .from_memory(from_memory), .NZVC(Flags),
-        .to_memory(to_memory), .address(address),
+      .ALU_Result(ALU_Result), .from_memory(ram_data_out), .NZVC(Flags),
+      .to_memory(ram_data_in), .address(address),
       .IR(IR), .A(A), .B(B), .C(C), .PC(PC), .MAR(MAR), .PR(PR), .CCR_Result(CCR_Result)
     );
 
