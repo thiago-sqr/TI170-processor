@@ -140,7 +140,7 @@ module caminho_dados (
             B = 8'h00;
       else if (execute && B_Load) begin
             B = Bus2;
-        if(IR == 8'h04) $display("%h", Bus2);
+          if(IR == 8'h04) $display("%h linhas", Bus2);
       end
     end
 
@@ -175,7 +175,6 @@ module control_unit (
   input [7:0] CCR_Result,          // Resultado do registrador de condições (CCR)
     output reg IR_Load,        // Sinal para carregar o registrador de instrução
     output reg MAR_Load,       // Sinal para carregar o registrador de endereço de memória
-    output reg MARR_Load,       // Sinal para carregar o registrador de endereço de memória da resposta
     output reg PC_Load,        // Sinal para carregar o registrador de contador de programa (PC)
     output reg PR_Load,        // Sinal para carregar o registrador de contador de resposta (PR)
     output reg PC_Inc, PR_Inc, // Sinal para incrementar o PC e o PR
@@ -300,59 +299,59 @@ module control_unit (
         case (current_state)
             S_FETCH_0: begin
                 MAR_Load = 1;  // Carregar endereço do opcode
-                #2
+                #5
                 Mar_Load = 0;
             end
             S_FETCH_1: begin
                 PC_Inc = 1;  // Incrementar PC
-                #2
+                #5
                 PC_Inc = 0;
             end
             S_FETCH_2: begin
                 Bus2_Sel = 2'b10; // "10" -> from memory
                 IR_Load = 1;  // Carregar a instrução
-                #2
+                #5
                 IR_Load = 0;
             end
             
             S_LDA_DIR_4: begin
                 MAR_Load = 1;
-                #2
-                Mar_Load = 0;
+                #5
+                MAR_Load = 0;
             end
             S_LDA_DIR_5: begin
                 PC_Inc = 1;
-                #2
+                #5
                 PC_Inc = 0;
             end
             S_LDA_DIR_6: begin
                 Bus2_Sel = 2'b10;
                 A_Load = 1;  // Carregar
-                #2
+                #5
                 A_Load = 0;
             end
             
             S_LDB_DIR_4: begin
                 MAR_Load = 1;
-                #2
-                Mar_Load = 0;
+                #5
+                MAR_Load = 0;
             end
             S_LDB_DIR_5: begin
                 PC_Inc = 1;
-                #2
+                #5
                 PC_Inc = 0;
             end
             S_LDB_DIR_6: begin
                 Bus2_Sel = 2'b10;
                 B_Load = 1;  // Carregar
-                #2
+                #5
                 B_Load = 0;
             end
 
             S_LDB_IMM_4: begin
                 Bus2_Sel = 2'b01; // Seleciona o valor imediato para o barramento 2
                 B_Load = 1;       // Ativa o carregamento do registrador B
-                #2
+                #5
                 B_Load = 0; 
             end
 
@@ -381,14 +380,14 @@ module control_unit (
                 Bus1_Sel = 3'b010;
                 Bus2_Sel = 2'b00;
                 PC_Load = 1;
-                #2
+                #5
                 PC_Load = 0;
             end
 
             S_STIR_DIR_8: begin
                 Bus1_Sel = 3'b100;
                 MAR_Load = 1;
-                #2;
+                #5;
                 MAR_Load = 1;
             end
             S_STIR_DIR_9: begin
@@ -401,13 +400,13 @@ module control_unit (
             S_STC_DIR_10: begin
                 Bus2_Sel = 2'b11;
                 C_Load = 1;
-                #2
+                #5
                 C_Load = 0;
             end
             S_STC_DIR_11: begin
                 Bus1_Sel = 3'b100;
                 MAR_Load = 1;
-                #2
+                #5
                 MAR_Load = 0;
             end
             S_STC_DIR_12: begin
@@ -420,7 +419,7 @@ module control_unit (
             S_STB_DIR_10: begin
                 Bus1_Sel = 3'b010;
                 B_Load = 1;
-                #2
+                #5
                 B_Load = 1;
             end
             S_STB_DIR_11: begin
