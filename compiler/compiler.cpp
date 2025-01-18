@@ -145,6 +145,7 @@ int main(int argc, char** argv) {
     // Laço para completar o arquivo com o número mínimo de linhas
     for (int i = 0; i < MIN_LINE - writtenLineCounter; i++) {
         bin_file.write(completeArgument("0").c_str(), argBuffer.size());
+        if (i == MIN_LINE - writtenLineCounter - 1) break;
         bin_file.put('\n');
     }
 
