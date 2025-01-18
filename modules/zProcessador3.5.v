@@ -814,7 +814,7 @@ module processador8bits(
         .IR_Load(IR_Load), .MAR_Load(MAR_Load), .CCR_Load(CCR_Load), .Memory_Load(Memory_Load),
       .ALU_Result(ALU_Result), .from_memory(ram_data_out), .NZVC(Flags),
       .to_memory(ram_data_in), .address(address),
-      .IR(IR), .A(A), .B(B), .C(C), .PC(PC), .MAR(MAR), .PR(PR), .CCR_Result(CCR_Result)
+        .IR(IR), .A(A), .B(B), .C(C), .PC(PC), .MAR(ram_address), .PR(PR), .CCR_Result(CCR_Result)
     );
 
     // Instância da unidade de controle
