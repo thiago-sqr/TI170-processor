@@ -1,3 +1,4 @@
+
 `timescale 1ns / 1ps
 
 //===================================================================================================================================
@@ -31,10 +32,12 @@ module data_memory(
 
     // Lógica de leitura e escrita na memória de dados
     always @ (posedge clock) begin
+      $display("Clock RAm alterado %h, write = %b", address, write);
         if (write && EN) begin
             RW[address] <= data_in;  // Escreve dados na memória
         end else if (!write && EN) begin
             data_out <= RW[address];  // Lê dados da memória
+          $display("saindo da ram %h", data_out);
         end
     end
 
@@ -96,6 +99,7 @@ module caminho_dados (
             IR = 8'h00;
         else if (IR_Load) begin
             IR = Bus2;
+          $display("bus2 = %h, ir = %h", Bus2, IR);
           if(IR != 8'h04) $display("Resposta da operação: ");
           else $display("Houve um salto de ");
           end
@@ -133,6 +137,7 @@ module caminho_dados (
             A = 8'h00;
         else if (execute && A_Load)
             A = Bus2;
+      $display("bus2 = %h, A = %h", Bus2, A);
     end
 
     always @(posedge B_Load or negedge reset) begin
@@ -140,6 +145,7 @@ module caminho_dados (
             B = 8'h00;
       else if (execute && B_Load) begin
             B = Bus2;
+        $display("bus2 = %h, B = %h", Bus2, B);
           if(IR == 8'h04) $display("%h linhas", Bus2);
       end
     end
@@ -227,12 +233,6 @@ module control_unit (
             S_FETCH_0: next_state <= S_FETCH_1;
             S_FETCH_1: next_state <= S_FETCH_2;
             S_FETCH_2: next_state <= S_DECODE_3;
-            S_DECODE_3: begin
-              if(IR == 8'h00)
-                next_state <= END_OF_ALL;  // finaliza a leitura; reconhece a instrução como fim de documento
-                 else if (IR == 8'h04) next_state <= S_LDB_DIR_4;
-                else next_state <= S_LDA_DIR_4;
-            end
 
             // Estados de coleta do primeiro operando e interpretação (é preciso outro operando ou não?)
             S_LDA_DIR_4: next_state <= S_LDA_DIR_5;
@@ -257,24 +257,10 @@ module control_unit (
             end
 
             // Estados que incorporam gravar a instrução que foi executada na memória de respostas;
-            ALU_7: next_state <=  S_STIR_DIR_8;
+            ALU_7: next_state <=  S_FETCH_0;
             
             // Estado de Jump: apenas pula a quantidade de instruções pedidas;
             JMP_7: next_state <= S_STIR_DIR_8;
-            
-            S_STIR_DIR_8: next_state <= S_STIR_DIR_9;
-            S_STIR_DIR_9: if(IR == 8'h04) next_state <= S_STB_DIR_10;
-                          else            next_state <= S_STC_DIR_10;
-
-            // Estados que incorporam a saída C à memória de respostas; 
-            S_STB_DIR_10: next_state <= S_STB_DIR_11;
-            S_STB_DIR_11: next_state <= S_STB_DIR_12;
-            S_STB_DIR_12: next_state <= S_FETCH_0;
-            
-            // Estados que incorporam a saída C à memória de respostas; 
-            S_STC_DIR_10: next_state <=  S_STC_DIR_11;
-            S_STC_DIR_11: next_state <= S_STC_DIR_12;
-            S_STC_DIR_12: next_state <= S_FETCH_0;
 
             default: next_state <= S_FETCH_0;
         endcase
@@ -299,29 +285,29 @@ module control_unit (
   case (current_state)
         S_FETCH_0: begin
             MAR_Load = 1;  // Carregar endereço do opcode
-            #5
             $display("S_FETCH_0: MAR_Load = %b", MAR_Load);
-            MAR_Load = 0;
         end
         S_FETCH_1: begin
             PC_Inc = 1;  // Incrementar PC
-            #5
             $display("S_FETCH_1: PC_Inc = %b", PC_Inc);
-            PC_Inc = 0;
         end
         S_FETCH_2: begin
             Bus2_Sel = 2'b10; // "10" -> from memory
             IR_Load = 1;  // Carregar a instrução
-            #5
             $display("S_FETCH_2: IR_Load = %b, Bus2_Sel = %b", IR_Load, Bus2_Sel);
-            IR_Load = 0;
+        end
+    
+        S_DECODE_3: begin
+          $display("Decode está rodando? Printa IR! %h", IR);
+          if(IR == 8'h00)
+            next_state <= END_OF_ALL;  // finaliza a leitura; reconhece a instrução como fim de documento
+            else if (IR == 8'h04) next_state <= S_LDB_DIR_4;
+            else next_state <= S_LDA_DIR_4;
         end
         
         S_LDA_DIR_4: begin
             MAR_Load = 1;
-            #5
             $display("S_LDA_DIR_4: MAR_Load = %b", MAR_Load);
-            MAR_Load = 0;
         end
         S_LDA_DIR_5: begin
             PC_Inc = 1;
@@ -595,7 +581,8 @@ module ALU (
     DIVISOR_8BITS divisor_inst (.Dividend(A),.Divisor(B),.Quociente(Quociente),.Resto(Resto));
     COMPARADOR comparador_inst (.A(A),.B(B),.comparacao_resultado(comparacao_resultado_int));
     
-    always @(*) begin
+  always @(ALU_Sel) begin
+      $display("A ALU TÁ RODANDO, AMEM %h", ALU_Sel);
         // Inicializando as flags para zero antes de cada operação
         Flags = 7'b0000000;
         comparacao_resultado = 2'b00;
@@ -773,6 +760,7 @@ module ALU (
                 Flags = 7'h7F;
             end
         endcase
+    $display("A resposta foi %h, wiiiiiii", C);
     end
 endmodule
 
@@ -823,7 +811,7 @@ module processador8bits(
         .reset(reset),
         .address(ram_address),   // Endereço da RAM
         .data_in(ram_data_in),   // Dados de entrada para a RAM
-        .write(ram_write),       // Sinal de escrita na RAM
+      .write(1'b0),       // Sinal de escrita na RAM
         .data_out(ram_data_out)  // Dados de saída da RAM
     );
 
