@@ -8,11 +8,25 @@ Este programa é um compilador simples que converte um arquivo de código assemb
 ## **Instruções Suportadas**  
 A tabela abaixo mostra os mnemonics reconhecidos pelo compilador:  
 
-| Mnemonic | Opcode   | Nº de Argumentos  |
-|----------|----------|-------------------|
-| ADD      | 00000001 |         2         |
-| SUB      | 00000010 |         2         |
-| NOT      | 11111111 |         1         |
+| Mnemonic | Opcode   | Nº de Argumentos |
+|----------|----------|------------------|
+| INC      | 00000001 | 1                |
+| DEC      | 00000010 | 1                |
+| NOT      | 00000011 | 1                |
+| JMP      | 00000100 | 1                |
+| ADD      | 00010000 | 2                |
+| SUB      | 00100000 | 2                |
+| MUL      | 00110000 | 2                |
+| DIV      | 01000000 | 2                |
+| MOD      | 01010000 | 2                |
+| AND      | 01100000 | 2                |
+| OR       | 01110000 | 2                |
+| XOR      | 10000000 | 2                |
+| NAND     | 10010000 | 2                |
+| NOR      | 10100000 | 2                |
+| XNOR     | 10110000 | 2                |
+| COMP     | 11000000 | 2                |
+
 
 ---
 
@@ -29,7 +43,8 @@ A tabela abaixo mostra os mnemonics reconhecidos pelo compilador:
    - Verifica se há o número correto de argumentos por comando.
    - Valida os argumentos quanto ao formato binário e tamanho esperado (8 bits). 
    - Completa com zeros argumentos com menos de 8 bits (1 se torna 00000001).
-   - Escreve o código de operação e argumentos no arquivo binário.  
+   - Escreve o código de operação e argumentos no arquivo binário. 
+   - O binário gerado terá no mínimo 128 linhas, para ser aceito no processador.
 
 3. **Saída:** O arquivo binário gerado contém a sequência de opcodes e argumentos correspondentes às instruções no arquivo assembly.
 
