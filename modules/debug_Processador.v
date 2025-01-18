@@ -32,12 +32,10 @@ module data_memory(
 
     // Lógica de leitura e escrita na memória de dados
     always @ (posedge clock) begin
-      $display("Clock RAm alterado %h, write = %b", address, write);
         if (write && EN) begin
             RW[address] <= data_in;  // Escreve dados na memória
         end else if (!write && EN) begin
             data_out <= RW[address];  // Lê dados da memória
-          $display("saindo da ram %h", data_out);
         end
     end
 
