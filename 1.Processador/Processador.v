@@ -1,3 +1,4 @@
+
 `timescale 1ns / 1ps
 
 //===================================================================================================================================
@@ -96,8 +97,6 @@ module caminho_dados (
             IR = 8'h00;
         else if (IR_Load) begin
             IR = Bus2;
-          if(IR != 8'h04) $display("Resposta da operação: ");
-          else $display("Houve um salto de ");
           end
     end
 
@@ -113,8 +112,11 @@ module caminho_dados (
     always @(posedge PC_Inc or negedge reset) begin
         if (!reset)
             PC = 8'h00;
-        else if (execute && PC_Load)
+      else if (execute && PC_Load) begin
+          $display("PC depois do Load: %h, bus2 %h", PC, Bus2);
             PC = PC + Bus2;
+      $display("PC APÓS o Load: %h, bus2 %h", PC, Bus2);
+      end
         else if (execute && PC_Inc)
             PC = PC + 1;
     end
@@ -133,6 +135,8 @@ module caminho_dados (
             A = 8'h00;
         else if (execute && A_Load)
             A = Bus2;
+      if(IR <= 8'b01100000 || IR == 8'h03) $display("Operando A = %d", A);
+      else           $display("Operando A = %b", A);
     end
 
     always @(posedge B_Load or negedge reset) begin
@@ -140,7 +144,9 @@ module caminho_dados (
             B = 8'h00;
       else if (execute && B_Load) begin
             B = Bus2;
-          if(IR == 8'h04) $display("%h linhas", Bus2);
+        if(IR >= 8'b01100000) $display("Operando B = %b", B);
+        else if(IR != 8'h04) $display("Operando B = %d", B);
+        else                 $display("Houve um salto de %d linhas", B);
       end
     end
 
@@ -227,12 +233,6 @@ module control_unit (
             S_FETCH_0: next_state <= S_FETCH_1;
             S_FETCH_1: next_state <= S_FETCH_2;
             S_FETCH_2: next_state <= S_DECODE_3;
-            S_DECODE_3: begin
-              if(IR == 8'h00)
-                next_state <= END_OF_ALL;  // finaliza a leitura; reconhece a instrução como fim de documento
-                 else if (IR == 8'h04) next_state <= S_LDB_DIR_4;
-                else next_state <= S_LDA_DIR_4;
-            end
 
             // Estados de coleta do primeiro operando e interpretação (é preciso outro operando ou não?)
             S_LDA_DIR_4: next_state <= S_LDA_DIR_5;
@@ -257,24 +257,10 @@ module control_unit (
             end
 
             // Estados que incorporam gravar a instrução que foi executada na memória de respostas;
-            ALU_7: next_state <=  S_STIR_DIR_8;
+            ALU_7: next_state <=  S_FETCH_0;
             
             // Estado de Jump: apenas pula a quantidade de instruções pedidas;
-            JMP_7: next_state <= S_STIR_DIR_8;
-            
-            S_STIR_DIR_8: next_state <= S_STIR_DIR_9;
-            S_STIR_DIR_9: if(IR == 8'h04) next_state <= S_STB_DIR_10;
-                          else            next_state <= S_STC_DIR_10;
-
-            // Estados que incorporam a saída C à memória de respostas; 
-            S_STB_DIR_10: next_state <= S_STB_DIR_11;
-            S_STB_DIR_11: next_state <= S_STB_DIR_12;
-            S_STB_DIR_12: next_state <= S_FETCH_0;
-            
-            // Estados que incorporam a saída C à memória de respostas; 
-            S_STC_DIR_10: next_state <=  S_STC_DIR_11;
-            S_STC_DIR_11: next_state <= S_STC_DIR_12;
-            S_STC_DIR_12: next_state <= S_FETCH_0;
+            JMP_7: next_state <= S_FETCH_0;
 
             default: next_state <= S_FETCH_0;
         endcase
@@ -296,152 +282,87 @@ module control_unit (
         Bus2_Sel = 2'b00;
         write = 0;
 
-        case (current_state)
-            S_FETCH_0: begin
-                MAR_Load = 1;  // Carregar endereço do opcode
-                #5
-                Mar_Load = 0;
-            end
-            S_FETCH_1: begin
-                PC_Inc = 1;  // Incrementar PC
-                #5
-                PC_Inc = 0;
-            end
-            S_FETCH_2: begin
-                Bus2_Sel = 2'b10; // "10" -> from memory
-                IR_Load = 1;  // Carregar a instrução
-                #5
-                IR_Load = 0;
-            end
-            
-            S_LDA_DIR_4: begin
-                MAR_Load = 1;
-                #5
-                MAR_Load = 0;
-            end
-            S_LDA_DIR_5: begin
-                PC_Inc = 1;
-                #5
-                PC_Inc = 0;
-            end
-            S_LDA_DIR_6: begin
-                Bus2_Sel = 2'b10;
-                A_Load = 1;  // Carregar
-                #5
-                A_Load = 0;
-            end
-            
-            S_LDB_DIR_4: begin
-                MAR_Load = 1;
-                #5
-                MAR_Load = 0;
-            end
-            S_LDB_DIR_5: begin
-                PC_Inc = 1;
-                #5
-                PC_Inc = 0;
-            end
-            S_LDB_DIR_6: begin
-                Bus2_Sel = 2'b10;
-                B_Load = 1;  // Carregar
-                #5
-                B_Load = 0;
-            end
+  case (current_state)
+        S_FETCH_0: begin
+            MAR_Load = 1;  // Carregar endereço do opcode
+        end
+        S_FETCH_1: begin
+            PC_Inc = 1;  // Incrementar PC
+        end
+        S_FETCH_2: begin
+            Bus2_Sel = 2'b10; // "10" -> from memory
+            IR_Load = 1;  // Carregar a instrução
+        end
+    
+        S_DECODE_3: begin
+          if(IR == 8'h00) next_state <= END_OF_ALL;  // finaliza a leitura; reconhece a instrução como fim de documento
+            else if (IR == 8'h04) next_state <= S_LDB_DIR_4;
+            else next_state <= S_LDA_DIR_4;
+        end
+        
+        S_LDA_DIR_4: begin
+            MAR_Load = 1;
+        end
+        S_LDA_DIR_5: begin
+            PC_Inc = 1;
+        end
+        S_LDA_DIR_6: begin
+            Bus2_Sel = 2'b10;
+            A_Load = 1;  // Carregar
+        end
+        
+        S_LDB_DIR_4: begin
+            MAR_Load = 1;
+        end
+        S_LDB_DIR_5: begin
+            PC_Inc = 1;
+        end
+        S_LDB_DIR_6: begin
+            Bus2_Sel = 2'b10;
+            B_Load = 1;  // Carregar
+        end
 
-            S_LDB_IMM_4: begin
-                Bus2_Sel = 2'b01; // Seleciona o valor imediato para o barramento 2
-                B_Load = 1;       // Ativa o carregamento do registrador B
-                #5
-                B_Load = 0; 
-            end
+        S_LDB_IMM_4: begin
+            Bus2_Sel = 2'b01; // Seleciona o valor imediato para o barramento 2
+            B_Load = 1;       // Ativa o carregamento do registrador B
+        end
 
-            ALU_7: begin
-                case(IR)
-                    8'h01: ALU_Sel = 4'h0;  // incremento
-                    8'h02: ALU_Sel = 4'h1;  // decremento
-                    8'h03: ALU_Sel = 4'h8;  // negação
-                 // 8'h04 não é uma instrução da ALU
-                    8'h10: ALU_Sel = 4'h0;  // soma
-                    8'h20: ALU_Sel = 4'h1;  // subtração
-                    8'h30: ALU_Sel = 4'h2;  // multiplicação
-                    8'h40: ALU_Sel = 4'h3;  // divisão
-                    8'h50: ALU_Sel = 4'h4;  // resto
-                    8'h60: ALU_Sel = 4'h6;  // AND
-                    8'h70: ALU_Sel = 4'h7;  // OR
-                    8'h80: ALU_Sel = 4'hA;  // XOR
-                    8'h90: ALU_Sel = 4'hB;  // NAND
-                    8'hA0: ALU_Sel = 4'hC;  // NOR
-                    8'hB0: ALU_Sel = 4'hD;  // XNOR
-                    8'hC0: ALU_Sel = 4'h5;  // comparação
-                endcase
-            end
+        ALU_7: begin
+            case(IR)
+                8'h01: ALU_Sel = 4'h0;  // incremento
+                8'h02: ALU_Sel = 4'h1;  // decremento
+                8'h03: ALU_Sel = 4'h8;  // negação
+                8'h10: ALU_Sel = 4'h0;  // soma
+                8'h20: ALU_Sel = 4'h1;  // subtração
+                8'h30: ALU_Sel = 4'h2;  // multiplicação
+                8'h40: ALU_Sel = 4'h3;  // divisão
+                8'h50: ALU_Sel = 4'h4;  // resto
+                8'h60: ALU_Sel = 4'h6;  // AND
+                8'h70: ALU_Sel = 4'h7;  // OR
+                8'h80: ALU_Sel = 4'hA;  // XOR
+                8'h90: ALU_Sel = 4'hB;  // NAND
+                8'hA0: ALU_Sel = 4'hC;  // NOR
+                8'hB0: ALU_Sel = 4'hD;  // XNOR
+                8'hC0: ALU_Sel = 4'h5;  // comparação
+            endcase
+        end
 
-            JMP_7: begin
-                Bus1_Sel = 3'b010;
-                Bus2_Sel = 2'b00;
-                PC_Load = 1;
-                #5
-                PC_Load = 0;
-            end
+        JMP_7: begin
+            Bus1_Sel = 3'b010;
+            Bus2_Sel = 2'b00;
+            PC_Load = 1;
+        end
 
-            S_STIR_DIR_8: begin
-                Bus1_Sel = 3'b100;
-                MAR_Load = 1;
-                #5;
-                MAR_Load = 1;
-            end
-            S_STIR_DIR_9: begin
-                Memory_Load = 1;
-                write = 1;
-                Bus1_Sel = 3'b101;
-                PR_Inc = 1;
-            end
-
-            S_STC_DIR_10: begin
-                Bus2_Sel = 2'b11;
-                C_Load = 1;
-                #5
-                C_Load = 0;
-            end
-            S_STC_DIR_11: begin
-                Bus1_Sel = 3'b100;
-                MAR_Load = 1;
-                #5
-                MAR_Load = 0;
-            end
-            S_STC_DIR_12: begin
-                Memory_Load = 1;
-                write = 1;
-                Bus1_Sel = 3'b011;
-                PR_Inc = 1;
-            end
-            
-            S_STB_DIR_10: begin
-                Bus1_Sel = 3'b010;
-                B_Load = 1;
-                #5
-                B_Load = 1;
-            end
-            S_STB_DIR_11: begin
-                MAR_Load = 1;
-                Bus1_Sel = 3'b100;
-            end
-            S_STB_DIR_12: begin
-                Memory_Load = 1;
-                write = 1;
-                Bus1_Sel = 3'b010;
-                PR_Inc = 1;
-            end
-
-            END_OF_ALL: begin
-                file_finished = 1;
-            end
-            // Outros estados conforme a lógica necessária
-            default: begin
-                // Caso de fallback
-            end
-        endcase
-    end
+        END_OF_ALL: begin
+            file_finished = 1;
+        end
+        
+        default: begin
+            // Caso de fallback
+            $display("DEFAULT: Nenhuma ação definida.");
+        end
+    endcase
+end
 
 endmodule
 
@@ -481,33 +402,22 @@ module SOMADOR_8BITS (A, B, Cin, Soma, Cout);
 endmodule
 
 module DIVISOR_8BITS (
-    input [7:0] Dividend, Divisor,
+    input [7:0] Dividend, 
+    input [7:0] Divisor,
     output reg [7:0] Quociente,
     output reg [7:0] Resto
 );
 
-    integer i; // Variável para contagem
-    reg [7:0] temp_dividend; // Variável para armazenar o dividendo durante a iteração
-    
     always @(*) begin
-        if (Divisor != 0) begin
-            Quociente = 0;
-            Resto = Dividend;
-            temp_dividend = Dividend;
-            
-            // Subtração sucessiva
-            for (i = 0; i < 8; i = i + 1) begin
-                if (temp_dividend >= Divisor) begin
-                    temp_dividend = temp_dividend - Divisor;
-                    Quociente = Quociente + 1;
-                end
-            end
-            Resto = temp_dividend; // O valor restante é o resto
-        end else begin
+        if (Divisor == 0) begin
             Quociente = 8'hFF; // Indicador de erro
             Resto = 8'hFF;     // Indicador de erro
+        end else begin
+            Quociente = Dividend / Divisor; // Operação de divisão
+            Resto = Dividend % Divisor;     // Operação de módulo (resto)
         end
     end
+
 endmodule
 
 module MULTIPLICADOR_8BITS (
@@ -534,17 +444,10 @@ module COMPARADOR (
     output reg [1:0] comparacao_resultado
 );
 
-    reg [7:0] diferenca; // Variável para armazenar a diferença entre A e B
-    reg sinal_diferenca; // Variável para armazenar o sinal da diferença
-    
     always @(*) begin
-        diferenca = A - B; // Subtrai A por B
-        sinal_diferenca = diferenca[7]; // Verifica o bit de sinal da diferença (bit mais significativo)
-        
-        // Verifica o sinal da diferença para determinar o resultado da comparação
-        if (sinal_diferenca == 0 && diferenca != 0) begin
+        if (A > B) begin
             comparacao_resultado = 2'b01;  // A é maior
-        end else if (sinal_diferenca == 1) begin
+        end else if (A < B) begin
             comparacao_resultado = 2'b10;  // A é menor
         end else begin
             comparacao_resultado = 2'b00;  // A é igual a B
@@ -573,7 +476,7 @@ module ALU (
     DIVISOR_8BITS divisor_inst (.Dividend(A),.Divisor(B),.Quociente(Quociente),.Resto(Resto));
     COMPARADOR comparador_inst (.A(A),.B(B),.comparacao_resultado(comparacao_resultado_int));
     
-    always @(*) begin
+  always @(ALU_Sel) begin
         // Inicializando as flags para zero antes de cada operação
         Flags = 7'b0000000;
         comparacao_resultado = 2'b00;
@@ -588,6 +491,7 @@ module ALU (
                 Flags[2] = (A[7] == B[7]) && (C[7] != A[7]);  // Overflow Flag para soma
                 Flags[1] = 0; //Não há chances de ser ativada
                 Flags[0] = 0; //Não há chances de ser ativada
+              $display("A operação foi de soma, com resposta: %d", C);
             end
 
             4'h1: begin  // Subtração
@@ -600,6 +504,7 @@ module ALU (
                 Flags[2] = (A[7] != B[7]) && (C[7] != A[7]);  // Overflow Flag para subtração
                 Flags[1] = 0; //Não há chances de ser ativada
                 Flags[0] = 0; //Não há chances de ser ativada
+              $display("A operação foi de subtração, com resposta: %d", C);
             end
 
             4'h2: begin  // Multiplicação
@@ -611,6 +516,7 @@ module ALU (
                 Flags[2] = (Produto[15:8] != 0) ? 1 : 0;  // Overflow Flag (Se os 8 bits mais significativos forem diferentes de 0, houve overflow)
                 Flags[1] = 0; //Não há chances de ser ativada
                 Flags[0] = 0; //Não há chances de ser ativada
+              $display("A operação foi de multiplicação, com resposta: %d", C);
             end
 
             4'h3: begin  // Divisão
@@ -623,9 +529,11 @@ module ALU (
                     Flags[2] = (C == 8'h00) ? 1 : 0;
                     Flags[1] = 0;  // Overflow não se aplica
                     Flags[0] = 0;  // Carry não se aplica
+                  $display("A operação foi de divisão, com resposta: %d", C);
                 end else begin
                     C = 8'hFF;  // Indicador de erro para divisão por zero
                     Flags = 7'h7F;  // Flags indicativas de erro
+                  $display("Impossível dividir por 0!!!");
                 end
             end
 
@@ -639,9 +547,11 @@ module ALU (
                     Flags[2] = (C == 8'h00) ? 1 : 0;
                     Flags[1] = 0; //Não há chances de ser ativada
                     Flags[0] = 0; //Não há chances de ser ativada
+                  $display("A operação foi de resto da divisão, com resposta: %d", C);
                 end else begin
                     C = 8'hFF;
                     Flags = 7'h7F;
+                  $display("Impossível dividir por 0!!!");
                 end
             end
 
@@ -656,6 +566,9 @@ module ALU (
                 Flags[0] = 0; //Não há chances de ser ativada
                 // Usando o módulo de comparação baseado em subtração
                 comparacao_resultado = comparacao_resultado_int;  // Passa o resultado do comparador
+              if(comparacao_resultado == 2'b01) $display("A operação foi de comparação, com A maior que B");
+              else if(comparacao_resultado == 2'b10) $display("A operação foi de comparação, com B maior que A");
+              else $display("A operação foi de comparação, com ambos os operandos sendo iguais!");
             end
             
             4'h6: begin  // AND
@@ -667,6 +580,7 @@ module ALU (
                 Flags[2] = 0;                        // Overflow Flag (não aplicável)
                 Flags[1] = 0;                        // Interrupção (não aplicável)
                 Flags[0] = 0;                        // Direção (não aplicável)
+              $display("A operação foi de AND, com resposta: %b", C);
             end
             
             4'h7: begin  // OR
@@ -678,6 +592,7 @@ module ALU (
                 Flags[2] = 0;                        // Overflow Flag (não aplicável)
                 Flags[1] = 0;                        // Interrupção (não aplicável)
                 Flags[0] = 0;                        // Direção (não aplicável)
+              $display("A operação foi de OR, com resposta: %b", C);
             end
             
             4'h8: begin  // NOT A
@@ -689,6 +604,7 @@ module ALU (
                 Flags[2] = 0;                        // Overflow Flag (não aplicável)
                 Flags[1] = 0;                        // Interrupção (não aplicável)
                 Flags[0] = 0;                        // Direção (não aplicável)
+              $display("A operação foi de NOT, com resposta: %b", C);
             end
             
             4'h9: begin  // NOT B
@@ -700,6 +616,7 @@ module ALU (
                 Flags[2] = 0;                        // Overflow Flag (não aplicável)
                 Flags[1] = 0;                        // Interrupção (não aplicável)
                 Flags[0] = 0;                        // Direção (não aplicável)
+              $display("A operação foi de NOT, com resposta: %b", C);
             end
             
             4'hA: begin  // XOR
@@ -711,6 +628,7 @@ module ALU (
                 Flags[2] = 0;                        // Overflow Flag (não aplicável)
                 Flags[1] = 0;                        // Interrupção (não aplicável)
                 Flags[0] = 0;                        // Direção (não aplicável)
+              $display("A operação foi de XOR, com resposta: %b", C);
             end
             
             4'hB: begin  // NAND
@@ -721,7 +639,8 @@ module ALU (
                 Flags[3] = (^C);                    // Paridade Flag
                 Flags[2] = 0;                        // Overflow Flag (não aplicável)
                 Flags[1] = 0;                        // Interrupção (não aplicável)
-                Flags[0] = 0;                        // Direção (não aplicável)
+              Flags[0] = 0;                        // Direção (não aplicável)
+              $display("A operação foi de NAND, com resposta: %b", C);
             end
             
             4'hC: begin  // NOR
@@ -733,6 +652,7 @@ module ALU (
                 Flags[2] = 0;                        // Overflow Flag (não aplicável)
                 Flags[1] = 0;                        // Interrupção (não aplicável)
                 Flags[0] = 0;                        // Direção (não aplicável)
+              $display("A operação foi de NOR, com resposta: %b", C);
             end
             
             4'hD: begin  // XNOR
@@ -744,6 +664,7 @@ module ALU (
                 Flags[2] = 0;                        // Overflow Flag (não aplicável)
                 Flags[1] = 0;                        // Interrupção (não aplicável)
                 Flags[0] = 0;                        // Direção (não aplicável)
+              $display("A operação foi de XNOR, com resposta: %b", C);
             end
 
             default: begin
@@ -764,7 +685,7 @@ module processador8bits(
   input wire clock, reset,               // Sincroniza os procedimentos e reseta os parâmetro, respectivamente 
   input wire [7:0] from_memory,
   output wire [7:0] to_memory, address,
-  output wire done                      // Indica quando o processo está concluído
+  output reg done                      // Indica quando o processo está concluído
 );
   // Conexões entre os módulos
     reg execution_phase, ending;         // Determina a fase em que o programa está funcionando
@@ -793,7 +714,10 @@ module processador8bits(
     end
     always @(*) begin
         ending = ending_wire;
-        if(ending) execution_phase = 0;
+      if(ending) begin
+        execution_phase = 0;
+        done = 0;
+      end
     end
   // Instanciação da Memória RAM
     data_memory RAM_inst (
@@ -801,7 +725,7 @@ module processador8bits(
         .reset(reset),
         .address(ram_address),   // Endereço da RAM
         .data_in(ram_data_in),   // Dados de entrada para a RAM
-        .write(ram_write),       // Sinal de escrita na RAM
+      .write(1'b0),       // Sinal de escrita na RAM
         .data_out(ram_data_out)  // Dados de saída da RAM
     );
 
@@ -814,7 +738,7 @@ module processador8bits(
         .IR_Load(IR_Load), .MAR_Load(MAR_Load), .CCR_Load(CCR_Load), .Memory_Load(Memory_Load),
       .ALU_Result(ALU_Result), .from_memory(ram_data_out), .NZVC(Flags),
       .to_memory(ram_data_in), .address(address),
-        .IR(IR), .A(A), .B(B), .C(C), .PC(PC), .MAR(MAR), .PR(PR), .CCR_Result(CCR_Result)
+        .IR(IR), .A(A), .B(B), .C(C), .PC(PC), .MAR(ram_address), .PR(PR), .CCR_Result(CCR_Result)
     );
 
     // Instância da unidade de controle
