@@ -178,7 +178,7 @@ module control_unit (
     output reg PC_Load,        // Sinal para carregar o registrador de contador de programa (PC)
     output reg PR_Load,        // Sinal para carregar o registrador de contador de resposta (PR)
     output reg PC_Inc, PR_Inc, // Sinal para incrementar o PC e o PR
-    output reg Memory_Load,     // Sinal para carregar uma informação na memória de dados (RAM)
+    output reg Memory_Load,    // Sinal para carregar uma informação na memória de dados (RAM)
     output reg A_Load,         // Sinal para carregar o registrador A
     output reg B_Load,         // Sinal para carregar o registrador B
     output reg C_Load,         // Sinal para carregar o registrador C
@@ -186,7 +186,7 @@ module control_unit (
     output reg CCR_Load,       // Sinal para carregar o registrador de condições
     output reg [2:0] Bus1_Sel, // Seleção para o barramento 1
     output reg [1:0] Bus2_Sel, // Seleção para o barramento 2
-    output reg write,           // Sinal de escrita em memória ou registradores
+    output reg write,          // Sinal de escrita em memória ou registradores
     output reg file_finished   // Determina que o arquivo foi terminado
 );
 
@@ -195,20 +195,16 @@ module control_unit (
 
     // Definindo os estados da máquina de estados
     parameter S_FETCH_0 = 0, S_FETCH_1 = 1, S_FETCH_2 = 2, S_DECODE_3 = 3; // Estados 0, 1 e 2 de busca, e o Estágio de Decodificar a instrução;
-    
-    parameter S_LDA_DIR_4 = 7, S_LDA_DIR_5 = 8, S_LDA_DIR_6 = 9;           // Carregam um valor de memória para o Registrador A
-    
+    parameter S_LDA_DIR_4 = 7, S_LDA_DIR_5 = 8, S_LDA_DIR_6 = 9;           // Carreagam um valor de memória para o Registrador A
     parameter S_LDB_IMM_4 = 14;                                            // Carrega um valor determinado para o Registrador B
     parameter S_LDB_DIR_4 = 17, S_LDB_DIR_5 = 18, S_LDB_DIR_6 = 19;        // Carregam um valor da memória para o Registrador B
     parameter S_STB_DIR_10 = 22, S_STB_DIR_11 = 23, S_STB_DIR_12 = 24;     // Guardam o valor do Registrador B na memória
-
     parameter ALU_7 = 25, JMP_7 = 26;                                        // Executam operações após coleta de instrução e operando(s)
-
     parameter S_STIR_DIR_8 = 32, S_STIR_DIR_9 = 33;                        // Guardam o valor do Registrador IR na memória
-    
     parameter S_STC_DIR_10 = 42, S_STC_DIR_11 = 43, S_STC_DIR_12= 44;      // Guardam o valor do Registrador C na memória 
-
     parameter END_OF_ALL = 100;                                            // Estado que termina a coleta e análise de instruções e ativa o processamento das respostas;
+
+    // Outros estados podem ser definidos conforme a necessidade...
 
     // Memória de estado (atualiza o estado atual)
     always @ (posedge clock or negedge reset) begin
@@ -222,67 +218,58 @@ module control_unit (
     always @ (current_state, IR) begin
         case (current_state)
             // Estados de coleta da instrução e interpretação (ela é de operação ou salto?)
-            S_FETCH_0: begin
-                $display("Estado: S_FETCH_0 - Buscando instrução...");
-                next_state <= S_FETCH_1;
-            end
-            S_FETCH_1: begin
-                $display("Estado: S_FETCH_1 - Incrementando PC...");
-                next_state <= S_FETCH_2;
-            end
-            S_FETCH_2: begin
-                $display("Estado: S_FETCH_2 - Carregando Instrução...");
-                next_state <= S_DECODE_3;
-            end
+            S_FETCH_0: next_state <= S_FETCH_1;
+            S_FETCH_1: next_state <= S_FETCH_2;
+            S_FETCH_2: next_state <= S_DECODE_3;
             S_DECODE_3: begin
-                if(IR == 8'h00) begin
-                    $display("Instrução Fim de Arquivo detectada, finalizando...");
-                    next_state <= END_OF_ALL;
-                end else if (IR == 8'h04) begin
-                    $display("Executando LDB_DIR...");
-                    next_state <= S_LDB_DIR_4;
-                end else begin
-                    $display("Executando LDA_DIR...");
-                    next_state <= S_LDA_DIR_4;
-                end
+                if(IR == 8'h00)
+                    next_state <= END_OF_ALL;  // finaliza a leitura; reconhece a instrução como fim de documento
+                else if (IR == 8'h04) next_state <= S_LDB_DIR_4;
+                else next_state <= S_LDA_DIR_4;
             end
 
-            // Estados de coleta do primeiro operando e interpretação
-            S_LDA_DIR_4: begin
-                $display("Estado: S_LDA_DIR_4 - Carregando A...");
-                next_state <= S_LDA_DIR_5;
-            end
-            S_LDA_DIR_5: begin
-                $display("Estado: S_LDA_DIR_5 - Carregando A...");
-                next_state <= S_LDA_DIR_6;
-            end
+            // Estados de coleta do primeiro operando e interpretação (é preciso outro operando ou não?)
+            S_LDA_DIR_4: next_state <= S_LDA_DIR_5;
+            S_LDA_DIR_5: next_state <= S_LDA_DIR_6;
             S_LDA_DIR_6: begin
-                if(IR == 8'h03) begin
-                    $display("Estado: S_LDA_DIR_6 - Executando ALU...");
-                    next_state <= ALU_7;
-                end else if(IR == 8'h01 || IR == 8'h02) begin
-                    $display("Estado: S_LDA_DIR_6 - Carregando B...");
-                    next_state <= S_LDB_IMM_4;
-                end else begin
-                    $display("Estado: S_LDA_DIR_6 - Carregando B da Memória...");
-                    next_state <= S_LDB_DIR_4;
-                end
+                if(IR == 8'h03) next_state <= ALU_7;
+                else if(IR == 8'h01 || IR == 8'h02) next_state <= S_LDB_IMM_4;
+                else next_state <= S_LDB_DIR_4;
             end
 
-            // Exemplo de transição para estados posteriores
-            ALU_7: begin
-                $display("Executando operação na ALU...");
-                next_state <= S_STIR_DIR_8;
+            // Estados em que o Registrador B recebe um valor predefinido (sua única utilização atual
+            // é de receber 8'h01, utilizado para incremento ou decremento do operando A)
+            S_LDB_IMM_4: next_state <= ALU_7;
+            
+            // Estados da coleta do segundo operando (ou do tamanho do salto) e interpretação (é um segundo operando ou o tamanho de um salto?)
+            S_LDB_DIR_4: next_state <= S_LDB_DIR_5;
+            S_LDB_DIR_5: next_state <= S_LDB_DIR_6;
+            S_LDB_DIR_6: begin
+                if(IR == 8'h04) next_state <= JMP_7;
+                else next_state <= ALU_7;
             end
 
-            JMP_7: begin
-                $display("Realizando Jump...");
-                next_state <= S_STIR_DIR_8;
-            end
+            // Estados que incorporam gravar a instrução que foi executada na memória de respostas;
+            ALU_7: next_state <=  S_STIR_DIR_8;
+            
+            // Estado de Jump: apenas pula a quantidade de instruções pedidas;
+            JMP_7: next_state <= S_STIR_DIR_8;
+            
+            S_STIR_DIR_8: next_state <= S_STIR_DIR_9;
+            S_STIR_DIR_9: if(IR == 8'h04) next_state <= S_STB_DIR_10;
+                          else            next_state <= S_STC_DIR_10;
 
-            default: begin
-                next_state <= S_FETCH_0;
-            end
+            // Estados que incorporam a saída C à memória de respostas; 
+            S_STB_DIR_10: next_state <= S_STB_DIR_11;
+            S_STB_DIR_11: next_state <= S_STB_DIR_12;
+            S_STB_DIR_12: next_state <= S_FETCH_0;
+            
+            // Estados que incorporam a saída C à memória de respostas; 
+            S_STC_DIR_10: next_state <=  S_STC_DIR_11;
+            S_STC_DIR_11: next_state <= S_STC_DIR_12;
+            S_STC_DIR_12: next_state <= S_FETCH_0;
+
+            default: next_state <= S_FETCH_0;
         endcase
     end
 
@@ -305,27 +292,43 @@ module control_unit (
         case (current_state)
             S_FETCH_0: begin
                 MAR_Load = 1;  // Carregar endereço do opcode
-                $display("Carregando MAR...");
+                $display("S_FETCH_0: MAR_Load = %b", MAR_Load); // Display para debug
                 #5
                 MAR_Load = 0;
             end
             S_FETCH_1: begin
                 PC_Inc = 1;  // Incrementar PC
-                $display("Incrementando PC...");
+                $display("S_FETCH_1: PC_Inc = %b", PC_Inc); // Display para debug
                 #5
                 PC_Inc = 0;
             end
             S_FETCH_2: begin
                 Bus2_Sel = 2'b10; // "10" -> from memory
                 IR_Load = 1;  // Carregar a instrução
-                $display("Carregando IR...");
+                $display("S_FETCH_2: IR_Load = %b, Bus2_Sel = %b", IR_Load, Bus2_Sel); // Display para debug
                 #5
                 IR_Load = 0;
             end
-            // Continuar com os outros estados conforme necessário...
+            
+            S_LDA_DIR_4: begin
+                MAR_Load = 1;
+                $display("S_LDA_DIR_4: MAR_Load = %b", MAR_Load); // Display para debug
+                #5
+                MAR_Load = 0;
+            end
+            S_LDA_DIR_5: begin
+                PC_Inc = 1;
+                $display("S_LDA_DIR_5: PC_Inc = %b", PC_Inc); // Display para debug
+                #5
+                PC_Inc = 0;
+            end
+
+            // Continue os sinais e a lógica para outros estados conforme necessário...
+            
         endcase
     end
 endmodule
+
 
 
 //===================================================================================================================================
