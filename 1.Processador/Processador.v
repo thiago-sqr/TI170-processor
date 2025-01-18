@@ -135,8 +135,8 @@ module caminho_dados (
             A = 8'h00;
         else if (execute && A_Load)
             A = Bus2;
-      if(IR <= 8'b01100000 || IR == 8'h03) $display("Operando A = %d", A);
-      else           $display("Operando A = %b", A);
+      if(IR >= 8'h60 || IR == 8'h03) $display("Operando A = %b", A);
+      else           $display("Operando A = %d", A);
     end
 
     always @(posedge B_Load or negedge reset) begin
@@ -144,7 +144,7 @@ module caminho_dados (
             B = 8'h00;
       else if (execute && B_Load) begin
             B = Bus2;
-        if(IR >= 8'b01100000) $display("Operando B = %b", B);
+        if(IR >= 8'h60) $display("Operando B = %b", B);
         else if(IR != 8'h04) $display("Operando B = %d", B);
         else                 $display("Houve um salto de %d linhas", B);
       end
